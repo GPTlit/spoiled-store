@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ApiPublicFileRouteImport } from './routes/api/public/file'
 import { Route as ApiPublicIosSlugRouteImport } from './routes/api/public/ios.$slug'
 import { Route as ApiPublicManifestSlugRouteImport } from './routes/api/public/manifest.$slug'
@@ -17,6 +18,11 @@ import { Route as ApiPublicManifestSlugRouteImport } from './routes/api/public/m
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicFileRoute = ApiPublicFileRouteImport.update({
@@ -37,12 +43,14 @@ const ApiPublicManifestSlugRoute = ApiPublicManifestSlugRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/api/public/file': typeof ApiPublicFileRoute
   '/api/public/ios/$slug': typeof ApiPublicIosSlugRoute
   '/api/public/manifest/$slug': typeof ApiPublicManifestSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/api/public/file': typeof ApiPublicFileRoute
   '/api/public/ios/$slug': typeof ApiPublicIosSlugRoute
   '/api/public/manifest/$slug': typeof ApiPublicManifestSlugRoute
@@ -50,6 +58,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/api/public/file': typeof ApiPublicFileRoute
   '/api/public/ios/$slug': typeof ApiPublicIosSlugRoute
   '/api/public/manifest/$slug': typeof ApiPublicManifestSlugRoute
@@ -58,18 +67,21 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/auth'
     | '/api/public/file'
     | '/api/public/ios/$slug'
     | '/api/public/manifest/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/auth'
     | '/api/public/file'
     | '/api/public/ios/$slug'
     | '/api/public/manifest/$slug'
   id:
     | '__root__'
     | '/'
+    | '/auth'
     | '/api/public/file'
     | '/api/public/ios/$slug'
     | '/api/public/manifest/$slug'
@@ -77,6 +89,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthRoute: typeof AuthRoute
   ApiPublicFileRoute: typeof ApiPublicFileRoute
   ApiPublicIosSlugRoute: typeof ApiPublicIosSlugRoute
   ApiPublicManifestSlugRoute: typeof ApiPublicManifestSlugRoute
@@ -89,6 +102,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/file': {
@@ -117,6 +137,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthRoute: AuthRoute,
   ApiPublicFileRoute: ApiPublicFileRoute,
   ApiPublicIosSlugRoute: ApiPublicIosSlugRoute,
   ApiPublicManifestSlugRoute: ApiPublicManifestSlugRoute,
