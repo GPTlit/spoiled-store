@@ -2,6 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { buildCapacitorKit } from "./kit.server";
+import { buildAndroidApk, findManifest, STORE_ORIGIN } from "./android.server";
+
+const bundleIdFor = (slug: string) => "app.spoiled." + slug.replace(/[^a-z0-9]/g, "");
 
 async function assertAdmin(supabase: any, userId: string) {
   const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
@@ -56,6 +59,50 @@ export const inspectLink = createServerFn({ method: "POST" })
     if (!icon) icon = abs(pick(html, /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)/i));
     if (!icon) icon = abs(pick(html, /<link[^>]+rel=["'](?:shortcut )?icon["'][^>]+href=["']([^"']+)/i));
     return { name: name.slice(0, 80), description: description.slice(0, 1000), icon: icon ?? null, reachable: true };
+  });
+
+/** Automatically builds and attaches the Android .apk for a link app. */
+export const buildAndroid = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ appId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const sb = context.supabase;
+    const { data: app, error } = await sb.from("apps").select("*").eq("id", data.appId).single();
+    if (error || !app) throw new Error("App not found");
+    if (!app.source_url) throw new Error("This app has no link");
+    await sb.from("apps").update({ build_status: "building" }).eq("id", app.id);
+    try {
+      const manifestUrl = (await findManifest(app.source_url)) ?? `${STORE_ORIGIN}/api/public/manifest/${app.slug}`;
+      const iconUrl = app.icon_url
+        ? /^https?:/.test(app.icon_url)
+          ? app.icon_url
+          : `${STORE_ORIGIN}/api/public/file?path=${encodeURIComponent(app.icon_url)}`
+        : `${STORE_ORIGIN}/icon-192.png`;
+      const keyPath = `${app.id}/signing.keystore`;
+      const existing = await sb.storage.from("store").download(keyPath);
+      const keystore = existing.data ? new Uint8Array(await existing.data.arrayBuffer()) : null;
+      const out = await buildAndroidApk({
+        name: app.name,
+        slug: app.slug,
+        url: app.source_url,
+        packageId: app.bundle_id || bundleIdFor(app.slug),
+        version: app.version || "1.0.0",
+        iconUrl,
+        manifestUrl,
+        keystore,
+      });
+      const apkPath = `${app.id}/android-${Date.now()}.apk`;
+      const up = await sb.storage.from("store").upload(apkPath, out.apk, { contentType: "application/vnd.android.package-archive", upsert: true });
+      if (up.error) throw up.error;
+      if (!keystore && out.keystore) await sb.storage.from("store").upload(keyPath, out.keystore, { upsert: true, contentType: "application/octet-stream" });
+      if (out.assetlinks) await sb.storage.from("store").upload(`${app.id}/assetlinks.json`, out.assetlinks, { upsert: true, contentType: "application/json" });
+      await sb.from("apps").update({ apk_url: apkPath, build_status: "ready" }).eq("id", app.id);
+      return { ok: true };
+    } catch (e: any) {
+      await sb.from("apps").update({ build_status: "failed" }).eq("id", app.id);
+      throw new Error(e?.message ?? "Android build failed");
+    }
   });
 
 /** Produces a ready-to-build Capacitor project (Android + iOS) as a base64 zip. */
