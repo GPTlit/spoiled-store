@@ -8,7 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { StoreHeader } from "@/components/StoreHeader";
 import { AppIcon } from "@/components/AppIcon";
 import { useAuth } from "@/hooks/use-auth";
-import { STATUS_LABEL, slugify, type AppRow } from "@/lib/store";
+import { STATUS_LABEL, fileUrl, slugify, type AppRow } from "@/lib/store";
+import type { Database } from "@/integrations/supabase/types";
 import { buildAndroid as buildAndroidFn, getCapacitorKit, inspectLink } from "@/lib/import.functions";
 
 export const Route = createFileRoute("/admin")({
