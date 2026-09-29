@@ -3,13 +3,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check, Globe, Loader2, Package, Trash2, Upload } from "lucide-react";
+import { Check, Globe, Loader2, Package, RefreshCw, Trash2, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { StoreHeader } from "@/components/StoreHeader";
 import { AppIcon } from "@/components/AppIcon";
 import { useAuth } from "@/hooks/use-auth";
 import { STATUS_LABEL, slugify, type AppRow } from "@/lib/store";
-import { getCapacitorKit, inspectLink } from "@/lib/import.functions";
+import { buildAndroid as buildAndroidFn, getCapacitorKit, inspectLink } from "@/lib/import.functions";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -142,7 +142,7 @@ function UploadForm({ onDone }: { onDone: () => void }) {
 function LinkForm({ onDone }: { onDone: () => void }) {
   const qc = useQueryClient();
   const inspect = useServerFn(inspectLink);
-  const kit = useServerFn(getCapacitorKit);
+  const buildAndroid = useServerFn(buildAndroidFn);
   const [url, setUrl] = useState("");
   const [steps, setSteps] = useState<string[]>([]);
   const [running, setRunning] = useState(false);
@@ -164,11 +164,10 @@ function LinkForm({ onDone }: { onDone: () => void }) {
         bundle_id: "app.spoiled." + slug.replace(/[^a-z0-9]/g, ""),
       }).select().single();
       if (error) throw error;
-      setSteps((s) => [...s, "Packaging Android + iPhone project with Capacitor and plugins…"]);
-      const z = await kit({ data: { appId: app.id } });
-      await supabase.from("apps").update({ build_status: "kit_ready" }).eq("id", app.id);
-      downloadB64(z.base64, z.filename);
-      setSteps((s) => [...s, "Home-screen app is live (name + icon)", "Native build kit downloaded", "Done — review and publish in My apps"]);
+      setSteps((s) => [...s, "iPhone home-screen app ready (name + icon)", "Building the Android .apk — this takes 1–3 minutes…"]);
+      qc.invalidateQueries({ queryKey: ["admin-apps"] });
+      await buildAndroid({ data: { appId: app.id } });
+      setSteps((s) => [...s, "Android .apk built and attached", "Done — review and publish in My apps"]);
       qc.invalidateQueries({ queryKey: ["admin-apps"] });
     } catch (err: any) {
       toast.error(err.message ?? "Import failed");
@@ -179,7 +178,7 @@ function LinkForm({ onDone }: { onDone: () => void }) {
   return (
     <div className="mx-auto max-w-2xl rounded-[2rem] glass p-6 sm:p-8">
       <h2 className="text-2xl font-semibold">Turn a link into an app</h2>
-      <p className="mt-1 text-sm text-muted-foreground">Paste your app's web link. Name, icon and description are pulled automatically, it becomes installable to the home screen, and you get a ready Capacitor project for the Android and iPhone files.</p>
+      <p className="mt-1 text-sm text-muted-foreground">Paste your app's web link. Name, icon and description are pulled automatically, the Android .apk is built and attached for you, and iPhone users get a home-screen app with its own name and icon.</p>
       <form onSubmit={run} className="mt-5 flex gap-2">
         <input className={input} placeholder="https://myapp.com" value={url} onChange={(e) => setUrl(e.target.value)} />
         <button disabled={running} className="flex shrink-0 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground disabled:opacity-60">
@@ -215,6 +214,17 @@ function downloadB64(b64: string, name: string) {
 function AppsList() {
   const qc = useQueryClient();
   const kit = useServerFn(getCapacitorKit);
+  const buildAndroid = useServerFn(buildAndroidFn);
+  const [rebuilding, setRebuilding] = useState<string | null>(null);
+  const rebuild = async (app: AppRow) => {
+    setRebuilding(app.id);
+    const t = toast.loading(`Building ${app.name} for Android — 1–3 minutes…`);
+    try {
+      await buildAndroid({ data: { appId: app.id } });
+      toast.success("Android .apk ready", { id: t });
+    } catch (e: any) { toast.error(e.message ?? "Build failed", { id: t }); }
+    finally { setRebuilding(null); refresh(); }
+  };
   const { data: apps = [], isLoading } = useQuery({
     queryKey: ["admin-apps"],
     queryFn: async () => ((await supabase.from("apps").select("*").order("created_at", { ascending: false })).data ?? []) as AppRow[],
@@ -256,18 +266,32 @@ function AppsList() {
               {a.published ? "Unpublish" : "Publish"}
             </button>
           </div>
-          <div className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
-            <StatusPill ok={!!a.apk_url} label="Android .apk" />
-            <StatusPill ok={!!a.ipa_url} label="iPhone .ipa" />
-            <StatusPill ok={!!a.source_url} label="Home-screen app" />
-          </div>
+          {a.source_type === "link" ? (
+            <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+              <StatusPill ok={!!a.apk_url} busy={a.build_status === "building" || rebuilding === a.id} label={a.apk_url ? "Android .apk (auto-built)" : a.build_status === "failed" ? "Android build failed" : "Android .apk"} />
+              <StatusPill ok label="iPhone home-screen app (auto)" />
+            </div>
+          ) : (
+            <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+              <StatusPill ok={!!a.apk_url} label="Android .apk" />
+              <StatusPill ok={!!a.ipa_url} label="iPhone .ipa" />
+            </div>
+          )}
           <div className="mt-3 flex flex-wrap gap-2">
-            <MiniUpload label={a.apk_url ? "Replace .apk" : "Add .apk"} accept=".apk" onFile={(f) => attach(a, "android", f)} />
-            <MiniUpload label={a.ipa_url ? "Replace .ipa" : "Add .ipa"} accept=".ipa" onFile={(f) => attach(a, "ios", f)} />
+            {a.source_type === "link" ? (
+              <button disabled={rebuilding === a.id} onClick={() => rebuild(a)} className="flex items-center gap-1.5 rounded-full bg-glass-strong px-3 py-1.5 hover:bg-accent disabled:opacity-60">
+                {rebuilding === a.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} {a.apk_url ? "Rebuild Android" : "Build Android"}
+              </button>
+            ) : (
+              <>
+                <MiniUpload label={a.apk_url ? "Replace .apk" : "Add .apk"} accept=".apk" onFile={(f) => attach(a, "android", f)} />
+                <MiniUpload label={a.ipa_url ? "Replace .ipa" : "Add .ipa"} accept=".ipa" onFile={(f) => attach(a, "ios", f)} />
+              </>
+            )}
             <MiniUpload label="Change icon" accept="image/*" onFile={(f) => attach(a, "icon", f)} />
             {a.source_type === "link" && (
               <button onClick={async () => { const z = await kit({ data: { appId: a.id } }); downloadB64(z.base64, z.filename); }} className="flex items-center gap-1.5 rounded-full bg-glass-strong px-3 py-1.5 hover:bg-accent">
-                <Package className="h-4 w-4" /> Build kit
+                <Package className="h-4 w-4" /> Native project
               </button>
             )}
             <Link to="/app/$slug" params={{ slug: a.slug }} className="rounded-full bg-glass-strong px-3 py-1.5 hover:bg-accent">View</Link>
@@ -281,10 +305,10 @@ function AppsList() {
   );
 }
 
-function StatusPill({ ok, label }: { ok: boolean; label: string }) {
+function StatusPill({ ok, label, busy }: { ok: boolean; label: string; busy?: boolean }) {
   return (
-    <div className={`flex items-center gap-2 rounded-2xl px-3 py-2 ${ok ? "bg-success/10 text-success" : "bg-glass text-muted-foreground"}`}>
-      {ok ? <Check className="h-4 w-4" /> : <span className="h-4 w-4 rounded-full border border-current" />} {label}
+    <div className={`flex items-center gap-2 rounded-2xl px-3 py-2 ${ok && !busy ? "bg-success/10 text-success" : "bg-glass text-muted-foreground"}`}>
+      {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : ok ? <Check className="h-4 w-4" /> : <span className="h-4 w-4 rounded-full border border-current" />} {busy ? "Building Android app…" : label}
     </div>
   );
 }

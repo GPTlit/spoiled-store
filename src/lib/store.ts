@@ -36,6 +36,7 @@ export function detectPlatform(): Platform {
 export const STATUS_LABEL: Record<string, string> = {
   ready: "Ready",
   importing: "Importing",
+  building: "Building Android app…",
   kit_ready: "Build kit ready",
   failed: "Failed",
 };
