@@ -324,3 +324,118 @@ function MiniUpload({ label, accept, onFile }: { label: string; accept: string; 
     </label>
   );
 }
+
+type NewsRow = Database["public"]["Tables"]["news"]["Row"];
+type DevRow = Database["public"]["Tables"]["developers"]["Row"];
+
+function NewsAdmin() {
+  const qc = useQueryClient();
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [cover, setCover] = useState<File[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  const { data: posts = [] } = useQuery({
+    queryKey: ["news"],
+    queryFn: async () => ((await supabase.from("news").select("*").order("created_at", { ascending: false })).data ?? []) as NewsRow[],
+  });
+
+  const post = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) { toast.error("Add a title"); return; }
+    setBusy(true);
+    try {
+      let coverPath: string | null = null;
+      if (cover[0]) {
+        const ext = cover[0].name.split(".").pop() || "jpg";
+        const path = `news/${Date.now()}.${ext}`;
+        const { error } = await supabase.storage.from("store").upload(path, cover[0], { upsert: true, contentType: cover[0].type });
+        if (error) throw error;
+        coverPath = path;
+      }
+      const { error } = await supabase.from("news").insert({ title: title.trim(), body: body.trim(), cover_url: coverPath, published: true });
+      if (error) throw error;
+      setTitle(""); setBody(""); setCover([]);
+      toast.success("Published");
+      qc.invalidateQueries({ queryKey: ["news"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not publish");
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="space-y-6">
+      <form onSubmit={post} className="space-y-3 rounded-[2rem] glass p-6">
+        <h2 className="text-xl font-semibold">Post an update</h2>
+        <input className={input} placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <textarea className={input} rows={4} placeholder="What's new?" value={body} onChange={(e) => setBody(e.target.value)} />
+        <FileField label="Cover image (optional)" accept="image/*" onChange={setCover} />
+        <button disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60">
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Publish news
+        </button>
+      </form>
+
+      <div className="space-y-3">
+        {posts.map((p) => (
+          <div key={p.id} className="flex items-center gap-4 rounded-[1.5rem] glass p-4">
+            {p.cover_url && <img src={fileUrl(p.cover_url)} alt="" className="h-12 w-12 rounded-xl object-cover" />}
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-semibold">{p.title}</p>
+              <p className="truncate text-sm text-muted-foreground">{p.body}</p>
+            </div>
+            <button
+              onClick={async () => {
+                await supabase.from("news").delete().eq("id", p.id);
+                qc.invalidateQueries({ queryKey: ["news"] });
+              }}
+              className="rounded-full p-2 text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DevsAdmin() {
+  const qc = useQueryClient();
+  const { data: devs = [] } = useQuery({
+    queryKey: ["developers"],
+    queryFn: async () => ((await supabase.from("developers").select("*").order("created_at", { ascending: false })).data ?? []) as DevRow[],
+  });
+
+  const setStatus = async (id: string, status: string) => {
+    const { error } = await supabase.from("developers").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(status === "active" ? "Developer approved" : "Updated");
+    qc.invalidateQueries({ queryKey: ["developers"] });
+  };
+
+  if (devs.length === 0) return <p className="text-center text-muted-foreground">No developer requests yet.</p>;
+
+  return (
+    <div className="space-y-3">
+      {devs.map((d) => (
+        <div key={d.id} className="flex flex-wrap items-center gap-3 rounded-[1.5rem] glass p-4">
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-semibold">{d.display_name}</p>
+            <p className="truncate text-sm text-muted-foreground">{d.contact_email ?? "—"} · $4.99/mo</p>
+          </div>
+          <span className="rounded-full bg-glass-strong px-3 py-1 text-xs capitalize text-muted-foreground">{d.status}</span>
+          {d.status !== "active" && (
+            <button onClick={() => setStatus(d.id, "active")} className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground">
+              <Check className="h-3.5 w-3.5" /> Approve
+            </button>
+          )}
+          {d.status !== "rejected" && (
+            <button onClick={() => setStatus(d.id, "rejected")} className="rounded-full bg-glass-strong px-4 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground">
+              Reject
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
