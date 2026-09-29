@@ -27,6 +27,7 @@ export type Database = {
           id: string
           ipa_url: string | null
           name: string
+          owner_id: string | null
           published: boolean
           screenshots: string[]
           slug: string
@@ -48,6 +49,7 @@ export type Database = {
           id?: string
           ipa_url?: string | null
           name: string
+          owner_id?: string | null
           published?: boolean
           screenshots?: string[]
           slug: string
@@ -69,6 +71,7 @@ export type Database = {
           id?: string
           ipa_url?: string | null
           name?: string
+          owner_id?: string | null
           published?: boolean
           screenshots?: string[]
           slug?: string
@@ -77,6 +80,39 @@ export type Database = {
           tagline?: string | null
           updated_at?: string
           version?: string | null
+        }
+        Relationships: []
+      }
+      developers: {
+        Row: {
+          contact_email: string | null
+          created_at: string
+          display_name: string
+          id: string
+          plan: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          contact_email?: string | null
+          created_at?: string
+          display_name: string
+          id?: string
+          plan?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          contact_email?: string | null
+          created_at?: string
+          display_name?: string
+          id?: string
+          plan?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -118,6 +154,33 @@ export type Database = {
           },
         ]
       }
+      news: {
+        Row: {
+          body: string
+          cover_url: string | null
+          created_at: string
+          id: string
+          published: boolean
+          title: string
+        }
+        Insert: {
+          body?: string
+          cover_url?: string | null
+          created_at?: string
+          id?: string
+          published?: boolean
+          title: string
+        }
+        Update: {
+          body?: string
+          cover_url?: string | null
+          created_at?: string
+          id?: string
+          published?: boolean
+          title?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -148,6 +211,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_active_developer: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"
