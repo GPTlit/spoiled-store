@@ -30,24 +30,24 @@ function AuthPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const parsed = schema.safeParse({ email, password });
-    if (!parsed.success) return toast.error("Enter a valid email and a password of 6+ characters");
+    if (!parsed.success) { toast.error("Enter a valid email and a password of 6+ characters"); return; }
     setBusy(true);
     if (mode === "in") {
       const { error } = await supabase.auth.signInWithPassword(parsed.data);
       setBusy(false);
-      if (error) return toast.error(error.message);
+      if (error) { toast.error(error.message); return; }
       navigate({ to: "/" });
     } else {
       const { error } = await supabase.auth.signUp({ ...parsed.data, options: { emailRedirectTo: window.location.origin } });
       setBusy(false);
-      if (error) return toast.error(error.message);
+      if (error) { toast.error(error.message); return; }
       toast.success("Check your email to confirm your account");
     }
   };
 
   const google = async () => {
     const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
-    if (r.error) return toast.error("Google sign-in failed");
+    if (r.error) { toast.error("Google sign-in failed"); return; }
     if (r.redirected) return;
     navigate({ to: "/" });
   };

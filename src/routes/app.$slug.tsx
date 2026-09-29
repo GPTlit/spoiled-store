@@ -130,11 +130,11 @@ function Feedback({ appId }: { appId: string }) {
     const { error } = await supabase.from("feedback").insert({
       app_id: appId,
       user_id: user.id,
-      author_name: (user.user_metadata?.full_name as string) || user.email?.split("@")[0],
+      author_name: (user.user_metadata?.["full_name"] as string) || user.email?.split("@")[0] || null,
       rating,
       comment: text,
     });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setComment("");
     qc.invalidateQueries({ queryKey: ["feedback", appId] });
   };

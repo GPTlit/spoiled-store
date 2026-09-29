@@ -28,7 +28,7 @@ export const Route = createFileRoute("/admin")({
 async function uploadFile(appId: string, kind: string, file: File) {
   const ext = file.name.split(".").pop()?.toLowerCase() || "bin";
   const path = `${appId}/${kind}-${Date.now()}.${ext}`;
-  const { error } = await supabase.storage.from("store").upload(path, file, { upsert: true, contentType: file.type || undefined });
+  const { error } = await supabase.storage.from("store").upload(path, file, { upsert: true, contentType: file.type || "application/octet-stream" });
   if (error) throw error;
   return path;
 }
@@ -92,7 +92,7 @@ function UploadForm({ onDone }: { onDone: () => void }) {
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!f.name.trim()) return toast.error("Name is required");
+    if (!f.name.trim()) { toast.error("Name is required"); return; }
     try {
       setBusy("Creating app…");
       const { data: app, error } = await supabase.from("apps").insert({
@@ -151,7 +151,7 @@ function LinkForm({ onDone }: { onDone: () => void }) {
     e.preventDefault();
     let u = url.trim();
     if (!/^https?:\/\//.test(u)) u = "https://" + u;
-    try { new URL(u); } catch { return toast.error("That link doesn't look right"); }
+    try { new URL(u); } catch { { toast.error("That link doesn't look right"); return; } }
     setRunning(true);
     setSteps(["Reading your app…"]);
     try {
