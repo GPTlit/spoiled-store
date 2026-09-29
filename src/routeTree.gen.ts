@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AppsRouteImport } from './routes/apps'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as DeveloperRouteImport } from './routes/developer'
 import { Route as NewsRouteImport } from './routes/news'
 import { Route as AppSlugRouteImport } from './routes/app.$slug'
 import { Route as OpenSlugRouteImport } from './routes/open.$slug'
@@ -38,6 +39,11 @@ const AppsRoute = AppsRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeveloperRoute = DeveloperRouteImport.update({
+  id: '/developer',
+  path: '/developer',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NewsRoute = NewsRouteImport.update({
@@ -76,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/apps': typeof AppsRoute
   '/auth': typeof AuthRoute
+  '/developer': typeof DeveloperRoute
   '/news': typeof NewsRoute
   '/app/$slug': typeof AppSlugRoute
   '/open/$slug': typeof OpenSlugRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/apps': typeof AppsRoute
   '/auth': typeof AuthRoute
+  '/developer': typeof DeveloperRoute
   '/news': typeof NewsRoute
   '/app/$slug': typeof AppSlugRoute
   '/open/$slug': typeof OpenSlugRoute
@@ -101,6 +109,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/apps': typeof AppsRoute
   '/auth': typeof AuthRoute
+  '/developer': typeof DeveloperRoute
   '/news': typeof NewsRoute
   '/app/$slug': typeof AppSlugRoute
   '/open/$slug': typeof OpenSlugRoute
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/apps'
     | '/auth'
+    | '/developer'
     | '/news'
     | '/app/$slug'
     | '/open/$slug'
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/apps'
     | '/auth'
+    | '/developer'
     | '/news'
     | '/app/$slug'
     | '/open/$slug'
@@ -139,6 +150,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/apps'
     | '/auth'
+    | '/developer'
     | '/news'
     | '/app/$slug'
     | '/open/$slug'
@@ -152,6 +164,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   AppsRoute: typeof AppsRoute
   AuthRoute: typeof AuthRoute
+  DeveloperRoute: typeof DeveloperRoute
   NewsRoute: typeof NewsRoute
   AppSlugRoute: typeof AppSlugRoute
   OpenSlugRoute: typeof OpenSlugRoute
@@ -188,6 +201,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/developer': {
+      id: '/developer'
+      path: '/developer'
+      fullPath: '/developer'
+      preLoaderRoute: typeof DeveloperRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/news': {
@@ -240,6 +260,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   AppsRoute: AppsRoute,
   AuthRoute: AuthRoute,
+  DeveloperRoute: DeveloperRoute,
   NewsRoute: NewsRoute,
   AppSlugRoute: AppSlugRoute,
   OpenSlugRoute: OpenSlugRoute,
