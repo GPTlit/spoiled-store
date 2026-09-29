@@ -1,0 +1,1 @@
+alter table public.apps add column bundle_id text;
