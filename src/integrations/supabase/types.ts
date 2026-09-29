@@ -14,16 +14,140 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      apps: {
+        Row: {
+          apk_url: string | null
+          build_log: string | null
+          build_status: string
+          category: string | null
+          created_at: string
+          description: string | null
+          icon_url: string | null
+          id: string
+          ipa_url: string | null
+          name: string
+          published: boolean
+          screenshots: string[]
+          slug: string
+          source_type: string
+          source_url: string | null
+          tagline: string | null
+          updated_at: string
+          version: string | null
+        }
+        Insert: {
+          apk_url?: string | null
+          build_log?: string | null
+          build_status?: string
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          icon_url?: string | null
+          id?: string
+          ipa_url?: string | null
+          name: string
+          published?: boolean
+          screenshots?: string[]
+          slug: string
+          source_type?: string
+          source_url?: string | null
+          tagline?: string | null
+          updated_at?: string
+          version?: string | null
+        }
+        Update: {
+          apk_url?: string | null
+          build_log?: string | null
+          build_status?: string
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          icon_url?: string | null
+          id?: string
+          ipa_url?: string | null
+          name?: string
+          published?: boolean
+          screenshots?: string[]
+          slug?: string
+          source_type?: string
+          source_url?: string | null
+          tagline?: string | null
+          updated_at?: string
+          version?: string | null
+        }
+        Relationships: []
+      }
+      feedback: {
+        Row: {
+          app_id: string
+          author_name: string | null
+          comment: string
+          created_at: string
+          id: string
+          rating: number
+          user_id: string
+        }
+        Insert: {
+          app_id: string
+          author_name?: string | null
+          comment: string
+          created_at?: string
+          id?: string
+          rating?: number
+          user_id: string
+        }
+        Update: {
+          app_id?: string
+          author_name?: string | null
+          comment?: string
+          created_at?: string
+          id?: string
+          rating?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +274,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
