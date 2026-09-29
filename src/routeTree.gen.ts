@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AppsRouteImport } from './routes/apps'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as NewsRouteImport } from './routes/news'
 import { Route as AppSlugRouteImport } from './routes/app.$slug'
 import { Route as OpenSlugRouteImport } from './routes/open.$slug'
 import { Route as ApiPublicFileRouteImport } from './routes/api/public/file'
@@ -28,9 +30,19 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppsRoute = AppsRouteImport.update({
+  id: '/apps',
+  path: '/apps',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NewsRoute = NewsRouteImport.update({
+  id: '/news',
+  path: '/news',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppSlugRoute = AppSlugRouteImport.update({
@@ -62,7 +74,9 @@ const ApiPublicManifestSlugRoute = ApiPublicManifestSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/apps': typeof AppsRoute
   '/auth': typeof AuthRoute
+  '/news': typeof NewsRoute
   '/app/$slug': typeof AppSlugRoute
   '/open/$slug': typeof OpenSlugRoute
   '/api/public/file': typeof ApiPublicFileRoute
@@ -72,7 +86,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/apps': typeof AppsRoute
   '/auth': typeof AuthRoute
+  '/news': typeof NewsRoute
   '/app/$slug': typeof AppSlugRoute
   '/open/$slug': typeof OpenSlugRoute
   '/api/public/file': typeof ApiPublicFileRoute
@@ -83,7 +99,9 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/apps': typeof AppsRoute
   '/auth': typeof AuthRoute
+  '/news': typeof NewsRoute
   '/app/$slug': typeof AppSlugRoute
   '/open/$slug': typeof OpenSlugRoute
   '/api/public/file': typeof ApiPublicFileRoute
@@ -95,7 +113,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/apps'
     | '/auth'
+    | '/news'
     | '/app/$slug'
     | '/open/$slug'
     | '/api/public/file'
@@ -105,7 +125,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
+    | '/apps'
     | '/auth'
+    | '/news'
     | '/app/$slug'
     | '/open/$slug'
     | '/api/public/file'
@@ -115,7 +137,9 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/apps'
     | '/auth'
+    | '/news'
     | '/app/$slug'
     | '/open/$slug'
     | '/api/public/file'
@@ -126,7 +150,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  AppsRoute: typeof AppsRoute
   AuthRoute: typeof AuthRoute
+  NewsRoute: typeof NewsRoute
   AppSlugRoute: typeof AppSlugRoute
   OpenSlugRoute: typeof OpenSlugRoute
   ApiPublicFileRoute: typeof ApiPublicFileRoute
@@ -150,11 +176,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/apps': {
+      id: '/apps'
+      path: '/apps'
+      fullPath: '/apps'
+      preLoaderRoute: typeof AppsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/news': {
+      id: '/news'
+      path: '/news'
+      fullPath: '/news'
+      preLoaderRoute: typeof NewsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/$slug': {
@@ -198,7 +238,9 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  AppsRoute: AppsRoute,
   AuthRoute: AuthRoute,
+  NewsRoute: NewsRoute,
   AppSlugRoute: AppSlugRoute,
   OpenSlugRoute: OpenSlugRoute,
   ApiPublicFileRoute: ApiPublicFileRoute,
