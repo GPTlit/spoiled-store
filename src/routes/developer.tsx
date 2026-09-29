@@ -168,7 +168,7 @@ function ActiveDeveloper({ dev }: { dev: DevRow }) {
         owner_id: user!.id, published: false,
       }).select().single();
       if (error) throw error;
-      const patch: Record<string, unknown> = {};
+      const patch: Partial<Database["public"]["Tables"]["apps"]["Update"]> = {};
       if (icon[0]) { setBusy("Uploading icon…"); patch["icon_url"] = await uploadFile(app.id, "icon", icon[0]); }
       if (shots.length) {
         const list: string[] = [];
