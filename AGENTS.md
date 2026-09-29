@@ -11,4 +11,4 @@
 
 - Store files live in the private `store` bucket; the app references them via `/api/public/file?path=` (redirects to a signed URL) because public buckets are blocked in this workspace.
 - Admin access is the `admin` role in `user_roles`, auto-granted only to the owner's verified email by a DB trigger; the `/admin` page hides itself and RLS enforces it.
-- Link imports produce a Capacitor build kit zip (`src/lib/kit.server.ts`) plus a per-app installable page `/open/$slug` with its own manifest; native compiling happens outside the app (GitHub Actions workflow in the kit).
+- Link imports auto-build a signed Android .apk via the PWABuilder cloud packaging API (`src/lib/android.server.ts`, keystore reused from `store/<appId>/signing.keystore`) because Workers can't compile natively; iPhone gets the per-app home-screen page `/open/$slug`. The Capacitor kit stays as an optional download.

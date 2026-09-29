@@ -23,7 +23,7 @@ export async function findManifest(url: string): Promise<string | null> {
       html.match(/<link[^>]+rel=["']manifest["'][^>]+href=["']([^"']+)/i) ||
       html.match(/<link[^>]+href=["']([^"']+)["'][^>]+rel=["']manifest/i);
     if (!m) return null;
-    const href = new URL(m[1].replace(/&amp;/g, "&"), res.url || url).toString();
+    const href = new URL((m[1] ?? "").replace(/&amp;/g, "&"), res.url || url).toString();
     const check = await fetch(href);
     if (!check.ok) return null;
     await check.json();
@@ -93,9 +93,10 @@ export async function buildAndroidApk(k: Input) {
   }
   const files = unzipSync(new Uint8Array(await res.arrayBuffer()));
   const apkName = Object.keys(files).find((f) => f.toLowerCase().endsWith(".apk"));
-  if (!apkName) throw new Error("Android build returned no .apk");
+  const apk = apkName ? files[apkName] : undefined;
+  if (!apk) throw new Error("Android build returned no .apk");
   return {
-    apk: files[apkName],
+    apk,
     keystore: files["signing.keystore"] ?? null,
     assetlinks: files["assetlinks.json"] ?? null,
   };
