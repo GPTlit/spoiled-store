@@ -37,7 +37,7 @@ const input = "w-full rounded-2xl border border-input bg-glass px-4 py-2.5 text-
 
 function AdminPage() {
   const { isAdmin, loading } = useAuth();
-  const [tab, setTab] = useState<"apps" | "upload" | "link">("apps");
+  const [tab, setTab] = useState<"apps" | "upload" | "link" | "news" | "devs">("apps");
   if (loading) return <div className="grid min-h-screen place-items-center text-muted-foreground">Loading…</div>;
   if (!isAdmin)
     return (
@@ -49,8 +49,8 @@ function AdminPage() {
     <div className="min-h-screen">
       <StoreHeader />
       <main className="mx-auto max-w-5xl px-4 pb-24">
-        <div className="mx-auto mt-8 flex w-fit gap-1 rounded-full glass p-1">
-          {([["apps", "My apps"], ["upload", "Upload app"], ["link", "From a link"]] as const).map(([k, l]) => (
+        <div className="mx-auto mt-8 flex w-fit flex-wrap justify-center gap-1 rounded-full glass p-1">
+          {([["apps", "My apps"], ["upload", "Upload app"], ["link", "From a link"], ["news", "News"], ["devs", "Developers"]] as const).map(([k, l]) => (
             <button key={k} onClick={() => setTab(k)} className={`rounded-full px-5 py-2 text-sm font-medium transition ${tab === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
               {l}
             </button>
@@ -60,6 +60,8 @@ function AdminPage() {
           {tab === "apps" && <AppsList />}
           {tab === "upload" && <UploadForm onDone={() => setTab("apps")} />}
           {tab === "link" && <LinkForm onDone={() => setTab("apps")} />}
+          {tab === "news" && <NewsAdmin />}
+          {tab === "devs" && <DevsAdmin />}
         </div>
       </main>
     </div>
