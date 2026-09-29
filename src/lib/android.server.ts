@@ -69,9 +69,9 @@ export async function buildAndroidApk(k: Input) {
     isMetaQuestOnly: false,
     minSdkVersion: 21,
     splashScreenFadeOutDuration: 300,
-    signingMode: k.keystore ? "mine" : "new",
+    signingMode: "new",
     signing: {
-      file: k.keystore ? "data:application/octet-stream;base64," + Buffer.from(k.keystore).toString("base64") : null,
+      file: null,
       alias: "spoiled",
       fullName: k.name.slice(0, 50),
       organization: "Spoiled Store",

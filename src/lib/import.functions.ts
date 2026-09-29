@@ -80,8 +80,6 @@ export const buildAndroid = createServerFn({ method: "POST" })
           : `${STORE_ORIGIN}/api/public/file?path=${encodeURIComponent(app.icon_url)}`
         : `${STORE_ORIGIN}/icon-192.png`;
       const keyPath = `${app.id}/signing.keystore`;
-      const existing = await sb.storage.from("store").download(keyPath);
-      const keystore = existing.data ? new Uint8Array(await existing.data.arrayBuffer()) : null;
       const out = await buildAndroidApk({
         name: app.name,
         slug: app.slug,
@@ -90,12 +88,11 @@ export const buildAndroid = createServerFn({ method: "POST" })
         version: app.version || "1.0.0",
         iconUrl,
         manifestUrl,
-        keystore,
       });
       const apkPath = `${app.id}/android-${Date.now()}.apk`;
       const up = await sb.storage.from("store").upload(apkPath, out.apk, { contentType: "application/vnd.android.package-archive", upsert: true });
       if (up.error) throw up.error;
-      if (!keystore && out.keystore) await sb.storage.from("store").upload(keyPath, out.keystore, { upsert: true, contentType: "application/octet-stream" });
+      if (out.keystore) await sb.storage.from("store").upload(keyPath, out.keystore, { upsert: true, contentType: "application/octet-stream" });
       if (out.assetlinks) await sb.storage.from("store").upload(`${app.id}/assetlinks.json`, out.assetlinks, { upsert: true, contentType: "application/json" });
       await sb.from("apps").update({ apk_url: apkPath, build_status: "ready" }).eq("id", app.id);
       return { ok: true };
