@@ -15,7 +15,7 @@ export const Route = createFileRoute("/api/public/ios/$slug")({
           .maybeSingle();
         if (!app?.ipa_url) return new Response("Not found", { status: 404 });
         const origin = new URL(request.url).origin;
-        const ipa = `${origin}/api/public/file?path=${encodeURIComponent(app.ipa_url)}`;
+        const ipa = `${origin}/api/public/file?path=${encodeURIComponent(app.ipa_url)}&dl=${encodeURIComponent(app.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-spoiled.ipa")}`;
         const plist = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict><key>items</key><array><dict>

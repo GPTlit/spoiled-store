@@ -1,12 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { StoreHeader } from "@/components/StoreHeader";
 import { AppIcon } from "@/components/AppIcon";
 import type { AppRow } from "@/lib/store";
 
 export const Route = createFileRoute("/apps")({
+  validateSearch: (s: Record<string, unknown>) => ({ q: typeof s.q === "string" ? s.q : undefined }),
   head: () => ({
     meta: [
       { title: "Apps — Spoiled Store" },
@@ -21,7 +22,9 @@ export const Route = createFileRoute("/apps")({
 });
 
 function AppsPage() {
-  const [q, setQ] = useState("");
+  const search = Route.useSearch();
+  const [q, setQ] = useState(search.q ?? "");
+  useEffect(() => setQ(search.q ?? ""), [search.q]);
   const [cat, setCat] = useState("All");
   const { data: apps = [], isLoading } = useQuery({
     queryKey: ["apps", "published"],
@@ -46,6 +49,7 @@ function AppsPage() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search apps"
+          autoFocus
           className="mt-5 w-full rounded-2xl border border-input bg-glass px-4 py-2.5 text-sm outline-none focus:border-ring"
         />
         <div className="mt-4 flex flex-wrap gap-2">
