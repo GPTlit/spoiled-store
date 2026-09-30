@@ -40,3 +40,9 @@ export const STATUS_LABEL: Record<string, string> = {
   kit_ready: "Build kit ready",
   failed: "Failed",
 };
+
+/** Branded download filename, e.g. "my-app-spoiled.apk". */
+export function downloadName(name: string, ext: string) {
+  const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "app";
+  return `${base}-spoiled.${ext}`;
+}

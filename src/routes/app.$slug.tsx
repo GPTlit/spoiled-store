@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { StoreHeader } from "@/components/StoreHeader";
 import { AppIcon } from "@/components/AppIcon";
 import { useAuth } from "@/hooks/use-auth";
-import { detectPlatform, fileUrl, type AppRow, type FeedbackRow, type Platform } from "@/lib/store";
+import { detectPlatform, fileUrl, type AppRow, type FeedbackRow, type Platform, downloadName } from "@/lib/store";
 
 export const Route = createFileRoute("/app/$slug")({
   head: ({ params }) => ({
@@ -39,7 +39,7 @@ function AppPage() {
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const iosLink = app.ipa_url ? `itms-services://?action=download-manifest&url=${encodeURIComponent(`${origin}/api/public/ios/${app.slug}`)}` : null;
-  const apkLink = app.apk_url ? fileUrl(app.apk_url, `${app.name}.apk`) : null;
+  const apkLink = app.apk_url ? fileUrl(app.apk_url, downloadName(app.name, "apk")) : null;
   const hasWeb = !!app.source_url;
 
   return (
