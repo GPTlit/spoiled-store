@@ -25,7 +25,7 @@ export function StoreHeader() {
         </nav>
 
         <form
-          onSubmit={(e) => { e.preventDefault(); navigate({ to: "/apps", search: { q: q.trim() || undefined } }); }}
+          onSubmit={(e) => { e.preventDefault(); navigate({ to: "/apps", search: q.trim() ? { q: q.trim() } : {} }); }}
           className="ml-auto hidden items-center gap-2 rounded-full bg-glass-strong px-3 py-1.5 text-sm md:flex"
         >
           <Search className="h-4 w-4 text-muted-foreground" />
