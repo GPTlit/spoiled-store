@@ -21,7 +21,10 @@ function NotFoundComponent() {
         <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
         <p className="mt-2 text-sm text-muted-foreground">This page doesn't exist.</p>
         <div className="mt-6">
-          <Link to="/" className="inline-flex rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground">
+          <Link
+            to="/"
+            className="inline-flex rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground"
+          >
             Back to the store
           </Link>
         </div>
@@ -62,6 +65,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "theme-color", content: "#0b0b0d" },
       { title: "Spoiled Store" },
+      {
+        name: "description",
+        content: "Download Spoiled apps straight to your Android or iPhone.",
+      },
+      { property: "og:title", content: "Spoiled Store" },
+      {
+        property: "og:description",
+        content: "Download Spoiled apps straight to your Android or iPhone.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

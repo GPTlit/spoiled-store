@@ -10,7 +10,12 @@ import { AppIcon } from "@/components/AppIcon";
 import { useAuth } from "@/hooks/use-auth";
 import { STATUS_LABEL, fileUrl, slugify, type AppRow } from "@/lib/store";
 import type { Database } from "@/integrations/supabase/types";
-import { buildAndroid as buildAndroidFn, buildFromGithub, getCapacitorKit, inspectLink } from "@/lib/import.functions";
+import {
+  buildAndroid as buildAndroidFn,
+  buildFromGithub,
+  getCapacitorKit,
+  inspectLink,
+} from "@/lib/import.functions";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -29,21 +34,33 @@ export const Route = createFileRoute("/admin")({
 async function uploadFile(appId: string, kind: string, file: File) {
   const ext = file.name.split(".").pop()?.toLowerCase() || "bin";
   const path = `${appId}/${kind}-${Date.now()}.${ext}`;
-  const { error } = await supabase.storage.from("store").upload(path, file, { upsert: true, contentType: file.type || "application/octet-stream" });
+  const { error } = await supabase.storage
+    .from("store")
+    .upload(path, file, { upsert: true, contentType: file.type || "application/octet-stream" });
   if (error) throw error;
   return path;
 }
 
-const input = "w-full rounded-2xl border border-input bg-glass px-4 py-2.5 text-sm outline-none focus:border-ring";
+const input =
+  "w-full rounded-2xl border border-input bg-glass px-4 py-2.5 text-sm outline-none focus:border-ring";
 
 function AdminPage() {
   const { isAdmin, loading } = useAuth();
   const [tab, setTab] = useState<"apps" | "upload" | "link" | "news" | "devs">("apps");
-  if (loading) return <div className="grid min-h-screen place-items-center text-muted-foreground">Loading…</div>;
+  if (loading)
+    return (
+      <div className="grid min-h-screen place-items-center text-muted-foreground">Loading…</div>
+    );
   if (!isAdmin)
     return (
-      <div className="min-h-screen"><StoreHeader />
-        <p className="mt-24 text-center text-muted-foreground">This page isn't available. <Link to="/" className="underline">Back to store</Link></p>
+      <div className="min-h-screen">
+        <StoreHeader />
+        <p className="mt-24 text-center text-muted-foreground">
+          This page isn't available.{" "}
+          <Link to="/" className="underline">
+            Back to store
+          </Link>
+        </p>
       </div>
     );
   return (
@@ -51,8 +68,20 @@ function AdminPage() {
       <StoreHeader />
       <main className="mx-auto max-w-5xl px-4 pb-24">
         <div className="mx-auto mt-8 flex w-fit flex-wrap justify-center gap-1 rounded-full glass p-1">
-          {([["apps", "My apps"], ["upload", "Upload app"], ["link", "From a link"], ["news", "News"], ["devs", "Developers"]] as const).map(([k, l]) => (
-            <button key={k} onClick={() => setTab(k)} className={`rounded-full px-5 py-2 text-sm font-medium transition ${tab === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+          {(
+            [
+              ["apps", "My apps"],
+              ["upload", "Upload app"],
+              ["link", "From a link"],
+              ["news", "News"],
+              ["devs", "Developers"],
+            ] as const
+          ).map(([k, l]) => (
+            <button
+              key={k}
+              onClick={() => setTab(k)}
+              className={`rounded-full px-5 py-2 text-sm font-medium transition ${tab === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
               {l}
             </button>
           ))}
@@ -69,24 +98,47 @@ function AdminPage() {
   );
 }
 
-function FileField({ label, accept, multiple, onChange }: { label: string; accept: string; multiple?: boolean; onChange: (f: File[]) => void }) {
+function FileField({
+  label,
+  accept,
+  multiple,
+  onChange,
+}: {
+  label: string;
+  accept: string;
+  multiple?: boolean;
+  onChange: (f: File[]) => void;
+}) {
   const [names, setNames] = useState<string>("");
   return (
     <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-glass-edge bg-glass px-4 py-3 text-sm hover:bg-glass-strong">
       <Upload className="h-4 w-4 shrink-0" />
       <span className="flex-1 truncate">{names || label}</span>
-      <input type="file" hidden accept={accept} multiple={multiple} onChange={(e) => {
-        const fs = Array.from(e.target.files ?? []);
-        setNames(fs.map((f) => f.name).join(", "));
-        onChange(fs);
-      }} />
+      <input
+        type="file"
+        hidden
+        accept={accept}
+        multiple={multiple}
+        onChange={(e) => {
+          const fs = Array.from(e.target.files ?? []);
+          setNames(fs.map((f) => f.name).join(", "));
+          onChange(fs);
+        }}
+      />
     </label>
   );
 }
 
 function UploadForm({ onDone }: { onDone: () => void }) {
   const qc = useQueryClient();
-  const [f, setF] = useState({ name: "", tagline: "", description: "", category: "Apps", version: "1.0.0", bundle_id: "" });
+  const [f, setF] = useState({
+    name: "",
+    tagline: "",
+    description: "",
+    category: "Apps",
+    version: "1.0.0",
+    bundle_id: "",
+  });
   const [icon, setIcon] = useState<File[]>([]);
   const [shots, setShots] = useState<File[]>([]);
   const [apk, setApk] = useState<File[]>([]);
@@ -95,48 +147,116 @@ function UploadForm({ onDone }: { onDone: () => void }) {
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!f.name.trim()) { toast.error("Name is required"); return; }
+    if (!f.name.trim()) {
+      toast.error("Name is required");
+      return;
+    }
     try {
       setBusy("Creating app…");
-      const { data: app, error } = await supabase.from("apps").insert({
-        name: f.name.trim().slice(0, 80), slug: slugify(f.name), tagline: f.tagline.slice(0, 140), description: f.description.slice(0, 5000),
-        category: f.category, version: f.version, bundle_id: f.bundle_id || null, source_type: "upload", build_status: "ready",
-      }).select().single();
+      const { data: app, error } = await supabase
+        .from("apps")
+        .insert({
+          name: f.name.trim().slice(0, 80),
+          slug: slugify(f.name),
+          tagline: f.tagline.slice(0, 140),
+          description: f.description.slice(0, 5000),
+          category: f.category,
+          version: f.version,
+          bundle_id: f.bundle_id || null,
+          source_type: "upload",
+          build_status: "ready",
+        })
+        .select()
+        .single();
       if (error) throw error;
       const patch: Partial<AppRow> = {};
-      if (icon[0]) { setBusy("Uploading icon…"); patch.icon_url = await uploadFile(app.id, "icon", icon[0]); }
+      if (icon[0]) {
+        setBusy("Uploading icon…");
+        patch.icon_url = await uploadFile(app.id, "icon", icon[0]);
+      }
       if (shots.length) {
         patch.screenshots = [];
-        for (const [i, s] of shots.entries()) { setBusy(`Uploading screenshot ${i + 1}/${shots.length}…`); patch.screenshots.push(await uploadFile(app.id, `shot${i}`, s)); }
+        for (const [i, s] of shots.entries()) {
+          setBusy(`Uploading screenshot ${i + 1}/${shots.length}…`);
+          patch.screenshots.push(await uploadFile(app.id, `shot${i}`, s));
+        }
       }
-      if (apk[0]) { setBusy("Uploading Android file…"); patch.apk_url = await uploadFile(app.id, "android", apk[0]); }
-      if (ipa[0]) { setBusy("Uploading iPhone file…"); patch.ipa_url = await uploadFile(app.id, "ios", ipa[0]); }
+      if (apk[0]) {
+        setBusy("Uploading Android file…");
+        patch.apk_url = await uploadFile(app.id, "android", apk[0]);
+      }
+      if (ipa[0]) {
+        setBusy("Uploading iPhone file…");
+        patch.ipa_url = await uploadFile(app.id, "ios", ipa[0]);
+      }
       await supabase.from("apps").update(patch).eq("id", app.id);
       toast.success("Saved as draft — publish it when ready");
       qc.invalidateQueries({ queryKey: ["admin-apps"] });
       onDone();
     } catch (err: any) {
       toast.error(err.message ?? "Upload failed");
-    } finally { setBusy(""); }
+    } finally {
+      setBusy("");
+    }
   };
 
   return (
     <form onSubmit={save} className="mx-auto max-w-2xl space-y-3 rounded-[2rem] glass p-6 sm:p-8">
       <h2 className="text-2xl font-semibold">Upload an app</h2>
-      <input className={input} placeholder="App name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
-      <input className={input} placeholder="Short tagline" value={f.tagline} onChange={(e) => setF({ ...f, tagline: e.target.value })} />
-      <textarea className={input} rows={4} placeholder="Description" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
+      <input
+        className={input}
+        placeholder="App name"
+        value={f.name}
+        onChange={(e) => setF({ ...f, name: e.target.value })}
+      />
+      <input
+        className={input}
+        placeholder="Short tagline"
+        value={f.tagline}
+        onChange={(e) => setF({ ...f, tagline: e.target.value })}
+      />
+      <textarea
+        className={input}
+        rows={4}
+        placeholder="Description"
+        value={f.description}
+        onChange={(e) => setF({ ...f, description: e.target.value })}
+      />
       <div className="grid grid-cols-3 gap-3">
-        <input className={input} placeholder="Category" value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} />
-        <input className={input} placeholder="Version" value={f.version} onChange={(e) => setF({ ...f, version: e.target.value })} />
-        <input className={input} placeholder="Bundle ID (iOS)" value={f.bundle_id} onChange={(e) => setF({ ...f, bundle_id: e.target.value })} />
+        <input
+          className={input}
+          placeholder="Category"
+          value={f.category}
+          onChange={(e) => setF({ ...f, category: e.target.value })}
+        />
+        <input
+          className={input}
+          placeholder="Version"
+          value={f.version}
+          onChange={(e) => setF({ ...f, version: e.target.value })}
+        />
+        <input
+          className={input}
+          placeholder="Bundle ID (iOS)"
+          value={f.bundle_id}
+          onChange={(e) => setF({ ...f, bundle_id: e.target.value })}
+        />
       </div>
       <FileField label="App icon (square PNG)" accept="image/*" onChange={setIcon} />
       <FileField label="Screenshots" accept="image/*" multiple onChange={setShots} />
       <FileField label="Android file (.apk)" accept=".apk" onChange={setApk} />
       <FileField label="iPhone file (.ipa)" accept=".ipa" onChange={setIpa} />
-      <button disabled={!!busy} className="flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60">
-        {busy ? <><Loader2 className="h-4 w-4 animate-spin" /> {busy}</> : "Save app"}
+      <button
+        disabled={!!busy}
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+      >
+        {busy ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" /> {busy}
+          </>
+        ) : (
+          "Save app"
+        )}
       </button>
     </form>
   );
@@ -154,51 +274,101 @@ function LinkForm({ onDone }: { onDone: () => void }) {
     e.preventDefault();
     let u = url.trim();
     if (!/^https?:\/\//.test(u)) u = "https://" + u;
-    try { new URL(u); } catch { { toast.error("That link doesn't look right"); return; } }
+    try {
+      new URL(u);
+    } catch {
+      {
+        toast.error("That link doesn't look right");
+        return;
+      }
+    }
     setRunning(true);
     setSteps(["Reading your app…"]);
     try {
       const info = await inspect({ data: { url: u } });
       setSteps((s) => [...s, `Found "${info.name}"`, "Creating store listing…"]);
       const slug = slugify(info.name);
-      const { data: app, error } = await supabase.from("apps").insert({
-        name: info.name, slug, tagline: info.description.slice(0, 140), description: info.description,
-        icon_url: info.icon, source_type: "link", source_url: u, build_status: "importing",
-        bundle_id: "app.spoiled." + slug.replace(/[^a-z0-9]/g, ""),
-      }).select().single();
+      const { data: app, error } = await supabase
+        .from("apps")
+        .insert({
+          name: info.name,
+          slug,
+          tagline: info.description.slice(0, 140),
+          description: info.description,
+          icon_url: info.icon,
+          source_type: "link",
+          source_url: u,
+          build_status: "importing",
+          bundle_id: "app.spoiled." + slug.replace(/[^a-z0-9]/g, ""),
+        })
+        .select()
+        .single();
       if (error) throw error;
-      setSteps((s) => [...s, "iPhone home-screen app ready (name + icon)", "Building the Android .apk — this takes 1–3 minutes…"]);
+      setSteps((s) => [
+        ...s,
+        "iPhone home-screen app ready (name + icon)",
+        "Building the Android .apk — this takes 1–3 minutes…",
+      ]);
       qc.invalidateQueries({ queryKey: ["admin-apps"] });
       await buildAndroid({ data: { appId: app.id } });
-      setSteps((s) => [...s, "Android .apk built and attached", "Done — review and publish in My apps"]);
+      setSteps((s) => [
+        ...s,
+        "Android .apk built and attached",
+        "Done — review and publish in My apps",
+      ]);
       qc.invalidateQueries({ queryKey: ["admin-apps"] });
     } catch (err: any) {
       toast.error(err.message ?? "Import failed");
       setSteps((s) => [...s, "Failed"]);
-    } finally { setRunning(false); }
+    } finally {
+      setRunning(false);
+    }
   };
 
   return (
     <div className="mx-auto max-w-2xl rounded-[2rem] glass p-6 sm:p-8">
       <h2 className="text-2xl font-semibold">Turn a link into an app</h2>
-      <p className="mt-1 text-sm text-muted-foreground">Paste your app's web link. Name, icon and description are pulled automatically, the Android .apk is built and attached for you, and iPhone users get a home-screen app with its own name and icon.</p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Paste your app's web link. Name, icon and description are pulled automatically, the Android
+        .apk is built and attached for you, and iPhone users get a home-screen app with its own name
+        and icon.
+      </p>
       <form onSubmit={run} className="mt-5 flex gap-2">
-        <input className={input} placeholder="https://myapp.com" value={url} onChange={(e) => setUrl(e.target.value)} />
-        <button disabled={running} className="flex shrink-0 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground disabled:opacity-60">
-          {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4" />} Build
+        <input
+          className={input}
+          placeholder="https://myapp.com"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+        />
+        <button
+          disabled={running}
+          className="flex shrink-0 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+        >
+          {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4" />}{" "}
+          Build
         </button>
       </form>
       {steps.length > 0 && (
         <ol className="mt-6 space-y-2">
           {steps.map((s, i) => (
             <li key={i} className="flex items-center gap-2 text-sm">
-              {i === steps.length - 1 && running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 text-success" />} {s}
+              {i === steps.length - 1 && running ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4 text-success" />
+              )}{" "}
+              {s}
             </li>
           ))}
         </ol>
       )}
       {!running && steps.at(-1)?.startsWith("Done") && (
-        <button onClick={onDone} className="mt-6 rounded-full bg-glass-strong px-5 py-2 text-sm font-semibold">Go to My apps</button>
+        <button
+          onClick={onDone}
+          className="mt-6 rounded-full bg-glass-strong px-5 py-2 text-sm font-semibold"
+        >
+          Go to My apps
+        </button>
       )}
     </div>
   );
@@ -225,31 +395,58 @@ function AppsList() {
     try {
       await buildAndroid({ data: { appId: app.id } });
       toast.success("Android .apk ready", { id: t });
-    } catch (e: any) { toast.error(e.message ?? "Build failed", { id: t }); }
-    finally { setRebuilding(null); refresh(); }
+    } catch (e: any) {
+      toast.error(e.message ?? "Build failed", { id: t });
+    } finally {
+      setRebuilding(null);
+      refresh();
+    }
   };
   const { data: apps = [], isLoading } = useQuery({
     queryKey: ["admin-apps"],
-    refetchInterval: (q) => ((q.state.data as AppRow[] | undefined)?.some((a) => a.build_status === "building") ? 15000 : false),
-    queryFn: async () => ((await supabase.from("apps").select("*").order("created_at", { ascending: false })).data ?? []) as AppRow[],
+    refetchInterval: (q) =>
+      (q.state.data as AppRow[] | undefined)?.some((a) => a.build_status === "building")
+        ? 15000
+        : false,
+    queryFn: async () =>
+      ((await supabase.from("apps").select("*").order("created_at", { ascending: false })).data ??
+        []) as AppRow[],
   });
-  const refresh = () => { qc.invalidateQueries({ queryKey: ["admin-apps"] }); qc.invalidateQueries({ queryKey: ["apps"] }); };
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: ["admin-apps"] });
+    qc.invalidateQueries({ queryKey: ["apps"] });
+  };
   const update = async (id: string, patch: Partial<AppRow>) => {
     const { error } = await supabase.from("apps").update(patch).eq("id", id);
-    if (error) toast.error(error.message); else refresh();
+    if (error) toast.error(error.message);
+    else refresh();
   };
   const attach = async (app: AppRow, kind: "android" | "ios" | "icon", files: File[]) => {
     if (!files[0]) return;
     const t = toast.loading("Uploading…");
     try {
       const path = await uploadFile(app.id, kind, files[0]);
-      await update(app.id, kind === "android" ? { apk_url: path } : kind === "ios" ? { ipa_url: path } : { icon_url: path });
+      await update(
+        app.id,
+        kind === "android"
+          ? { apk_url: path }
+          : kind === "ios"
+            ? { ipa_url: path }
+            : { icon_url: path },
+      );
       toast.success("Uploaded", { id: t });
-    } catch (e: any) { toast.error(e.message, { id: t }); }
+    } catch (e: any) {
+      toast.error(e.message, { id: t });
+    }
   };
 
   if (isLoading) return <p className="text-center text-muted-foreground">Loading…</p>;
-  if (!apps.length) return <p className="text-center text-muted-foreground">No apps yet — upload one or build from a link.</p>;
+  if (!apps.length)
+    return (
+      <p className="text-center text-muted-foreground">
+        No apps yet — upload one or build from a link.
+      </p>
+    );
 
   return (
     <div className="space-y-4">
@@ -260,19 +457,35 @@ function AppsList() {
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold">{a.name}</p>
               <p className="truncate text-xs text-muted-foreground">
-                {a.source_type === "link" ? a.source_url : "Uploaded"} · {STATUS_LABEL[a.build_status] ?? a.build_status}
+                {a.source_type === "link" ? a.source_url : "Uploaded"} ·{" "}
+                {STATUS_LABEL[a.build_status] ?? a.build_status}
               </p>
             </div>
-            <span className={`rounded-full px-3 py-1 text-xs font-medium ${a.published ? "bg-success/20 text-success" : "bg-glass-strong text-muted-foreground"}`}>
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-medium ${a.published ? "bg-success/20 text-success" : "bg-glass-strong text-muted-foreground"}`}
+            >
               {a.published ? "Live" : "Draft"}
             </span>
-            <button onClick={() => update(a.id, { published: !a.published })} className="rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground">
+            <button
+              onClick={() => update(a.id, { published: !a.published })}
+              className="rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground"
+            >
               {a.published ? "Unpublish" : "Publish"}
             </button>
           </div>
           {a.source_type === "link" ? (
             <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
-              <StatusPill ok={!!a.apk_url} busy={a.build_status === "building" || rebuilding === a.id} label={a.apk_url ? "Android .apk (auto-built)" : a.build_status === "failed" ? "Android build failed" : "Android .apk"} />
+              <StatusPill
+                ok={!!a.apk_url}
+                busy={a.build_status === "building" || rebuilding === a.id}
+                label={
+                  a.apk_url
+                    ? "Android .apk (auto-built)"
+                    : a.build_status === "failed"
+                      ? "Android build failed"
+                      : "Android .apk"
+                }
+              />
               <StatusPill ok label="iPhone home-screen app (auto)" />
             </div>
           ) : (
@@ -284,26 +497,70 @@ function AppsList() {
           <GithubBuild app={a} onDone={refresh} />
           <div className="mt-3 flex flex-wrap gap-2">
             {a.source_type === "link" ? (
-              <button disabled={rebuilding === a.id} onClick={() => rebuild(a)} className="flex items-center gap-1.5 rounded-full bg-glass-strong px-3 py-1.5 hover:bg-accent disabled:opacity-60">
-                {rebuilding === a.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} {a.apk_url ? "Rebuild Android" : "Build Android"}
+              <button
+                disabled={rebuilding === a.id}
+                onClick={() => rebuild(a)}
+                className="flex items-center gap-1.5 rounded-full bg-glass-strong px-3 py-1.5 hover:bg-accent disabled:opacity-60"
+              >
+                {rebuilding === a.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}{" "}
+                {a.apk_url ? "Rebuild Android" : "Build Android"}
               </button>
             ) : (
               <>
-                <MiniUpload label={a.apk_url ? "Replace .apk" : "Add .apk"} accept=".apk" onFile={(f) => attach(a, "android", f)} />
-                <MiniUpload label={a.ipa_url ? "Replace .ipa" : "Add .ipa"} accept=".ipa" onFile={(f) => attach(a, "ios", f)} />
+                <MiniUpload
+                  label={a.apk_url ? "Replace .apk" : "Add .apk"}
+                  accept=".apk"
+                  onFile={(f) => attach(a, "android", f)}
+                />
+                <MiniUpload
+                  label={a.ipa_url ? "Replace .ipa" : "Add .ipa"}
+                  accept=".ipa"
+                  onFile={(f) => attach(a, "ios", f)}
+                />
               </>
             )}
             <MiniUpload label="Change icon" accept="image/*" onFile={(f) => attach(a, "icon", f)} />
             {a.source_type === "link" && (
-              <button onClick={async () => { const z = await kit({ data: { appId: a.id } }); downloadB64(z.base64, z.filename); }} className="flex items-center gap-1.5 rounded-full bg-glass-strong px-3 py-1.5 hover:bg-accent">
+              <button
+                onClick={async () => {
+                  const z = await kit({ data: { appId: a.id } });
+                  downloadB64(z.base64, z.filename);
+                }}
+                className="flex items-center gap-1.5 rounded-full bg-glass-strong px-3 py-1.5 hover:bg-accent"
+              >
                 <Package className="h-4 w-4" /> Native project
               </button>
             )}
-            <Link to="/app/$slug" params={{ slug: a.slug }} className="rounded-full bg-glass-strong px-3 py-1.5 hover:bg-accent">View</Link>
+            <Link
+              to="/app/$slug"
+              params={{ slug: a.slug }}
+              className="rounded-full bg-glass-strong px-3 py-1.5 hover:bg-accent"
+            >
+              View
+            </Link>
             {a.build_run_url && (
-              <a href={a.build_run_url} target="_blank" rel="noreferrer" className="rounded-full bg-glass-strong px-3 py-1.5 hover:bg-accent">Build log</a>
+              <a
+                href={a.build_run_url}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full bg-glass-strong px-3 py-1.5 hover:bg-accent"
+              >
+                Build log
+              </a>
             )}
-            <button onClick={async () => { if (confirm(`Delete ${a.name}?`)) { await supabase.from("apps").delete().eq("id", a.id); refresh(); } }} className="ml-auto flex items-center gap-1.5 rounded-full px-3 py-1.5 text-destructive hover:bg-destructive/10">
+            <button
+              onClick={async () => {
+                if (confirm(`Delete ${a.name}?`)) {
+                  await supabase.from("apps").delete().eq("id", a.id);
+                  refresh();
+                }
+              }}
+              className="ml-auto flex items-center gap-1.5 rounded-full px-3 py-1.5 text-destructive hover:bg-destructive/10"
+            >
               <Trash2 className="h-4 w-4" /> Delete
             </button>
           </div>
@@ -319,22 +576,50 @@ function GithubBuild({ app, onDone }: { app: AppRow; onDone: () => void }) {
   const [branch, setBranch] = useState(app.github_branch ?? "");
   const [busy, setBusy] = useState(false);
   const go = async () => {
-    const r = repo.trim().replace(/^https?:\/\/github\.com\//, "").replace(/\.git$/, "").replace(/\/$/, "");
-    if (!/^[\w.-]+\/[\w.-]+$/.test(r)) { toast.error("Enter the repository as owner/repo"); return; }
+    const r = repo
+      .trim()
+      .replace(/^https?:\/\/github\.com\//, "")
+      .replace(/\.git$/, "")
+      .replace(/\/$/, "");
+    if (!/^[\w.-]+\/[\w.-]+$/.test(r)) {
+      toast.error("Enter the repository as owner/repo");
+      return;
+    }
     setBusy(true);
     try {
-      await start({ data: { appId: app.id, repo: r, ...(branch.trim() ? { branch: branch.trim() } : {}) } });
-      toast.success("Native Android build started on GitHub — usually 5–15 minutes. The .apk attaches itself when done.");
+      await start({
+        data: { appId: app.id, repo: r, ...(branch.trim() ? { branch: branch.trim() } : {}) },
+      });
+      toast.success(
+        "Native Android build started on GitHub — usually 5–15 minutes. The .apk attaches itself when done.",
+      );
       onDone();
-    } catch (e: any) { toast.error(e.message ?? "Could not start build"); }
-    finally { setBusy(false); }
+    } catch (e: any) {
+      toast.error(e.message ?? "Could not start build");
+    } finally {
+      setBusy(false);
+    }
   };
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl bg-glass p-3 text-sm">
       <Github className="h-4 w-4 text-muted-foreground" />
-      <input value={repo} onChange={(e) => setRepo(e.target.value)} placeholder="GitHub repo (owner/repo)" className="min-w-0 flex-1 rounded-full border border-input bg-glass px-3 py-1.5 outline-none focus:border-ring" />
-      <input value={branch} onChange={(e) => setBranch(e.target.value)} placeholder="branch (optional)" className="w-36 rounded-full border border-input bg-glass px-3 py-1.5 outline-none focus:border-ring" />
-      <button disabled={busy} onClick={go} className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 font-semibold text-primary-foreground disabled:opacity-60">
+      <input
+        value={repo}
+        onChange={(e) => setRepo(e.target.value)}
+        placeholder="GitHub repo (owner/repo)"
+        className="min-w-0 flex-1 rounded-full border border-input bg-glass px-3 py-1.5 outline-none focus:border-ring"
+      />
+      <input
+        value={branch}
+        onChange={(e) => setBranch(e.target.value)}
+        placeholder="branch (optional)"
+        className="w-36 rounded-full border border-input bg-glass px-3 py-1.5 outline-none focus:border-ring"
+      />
+      <button
+        disabled={busy}
+        onClick={go}
+        className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 font-semibold text-primary-foreground disabled:opacity-60"
+      >
         {busy && <Loader2 className="h-4 w-4 animate-spin" />} Build native Android
       </button>
     </div>
@@ -343,17 +628,39 @@ function GithubBuild({ app, onDone }: { app: AppRow; onDone: () => void }) {
 
 function StatusPill({ ok, label, busy }: { ok: boolean; label: string; busy?: boolean }) {
   return (
-    <div className={`flex items-center gap-2 rounded-2xl px-3 py-2 ${ok && !busy ? "bg-success/10 text-success" : "bg-glass text-muted-foreground"}`}>
-      {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : ok ? <Check className="h-4 w-4" /> : <span className="h-4 w-4 rounded-full border border-current" />} {busy ? "Building Android app…" : label}
+    <div
+      className={`flex items-center gap-2 rounded-2xl px-3 py-2 ${ok && !busy ? "bg-success/10 text-success" : "bg-glass text-muted-foreground"}`}
+    >
+      {busy ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : ok ? (
+        <Check className="h-4 w-4" />
+      ) : (
+        <span className="h-4 w-4 rounded-full border border-current" />
+      )}{" "}
+      {busy ? "Building Android app…" : label}
     </div>
   );
 }
 
-function MiniUpload({ label, accept, onFile }: { label: string; accept: string; onFile: (f: File[]) => void }) {
+function MiniUpload({
+  label,
+  accept,
+  onFile,
+}: {
+  label: string;
+  accept: string;
+  onFile: (f: File[]) => void;
+}) {
   return (
     <label className="flex cursor-pointer items-center gap-1.5 rounded-full bg-glass-strong px-3 py-1.5 hover:bg-accent">
       <Upload className="h-4 w-4" /> {label}
-      <input type="file" hidden accept={accept} onChange={(e) => onFile(Array.from(e.target.files ?? []))} />
+      <input
+        type="file"
+        hidden
+        accept={accept}
+        onChange={(e) => onFile(Array.from(e.target.files ?? []))}
+      />
     </label>
   );
 }
@@ -370,40 +677,67 @@ function NewsAdmin() {
 
   const { data: posts = [] } = useQuery({
     queryKey: ["news"],
-    queryFn: async () => ((await supabase.from("news").select("*").order("created_at", { ascending: false })).data ?? []) as NewsRow[],
+    queryFn: async () =>
+      ((await supabase.from("news").select("*").order("created_at", { ascending: false })).data ??
+        []) as NewsRow[],
   });
 
   const post = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) { toast.error("Add a title"); return; }
+    if (!title.trim()) {
+      toast.error("Add a title");
+      return;
+    }
     setBusy(true);
     try {
       let coverPath: string | null = null;
       if (cover[0]) {
         const ext = cover[0].name.split(".").pop() || "jpg";
         const path = `news/${Date.now()}.${ext}`;
-        const { error } = await supabase.storage.from("store").upload(path, cover[0], { upsert: true, contentType: cover[0].type });
+        const { error } = await supabase.storage
+          .from("store")
+          .upload(path, cover[0], { upsert: true, contentType: cover[0].type });
         if (error) throw error;
         coverPath = path;
       }
-      const { error } = await supabase.from("news").insert({ title: title.trim(), body: body.trim(), cover_url: coverPath, published: true });
+      const { error } = await supabase
+        .from("news")
+        .insert({ title: title.trim(), body: body.trim(), cover_url: coverPath, published: true });
       if (error) throw error;
-      setTitle(""); setBody(""); setCover([]);
+      setTitle("");
+      setBody("");
+      setCover([]);
       toast.success("Published");
       qc.invalidateQueries({ queryKey: ["news"] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not publish");
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
     <div className="space-y-6">
       <form onSubmit={post} className="space-y-3 rounded-[2rem] glass p-6">
         <h2 className="text-xl font-semibold">Post an update</h2>
-        <input className={input} placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
-        <textarea className={input} rows={4} placeholder="What's new?" value={body} onChange={(e) => setBody(e.target.value)} />
+        <input
+          className={input}
+          placeholder="Title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+        <textarea
+          className={input}
+          rows={4}
+          placeholder="What's new?"
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+        />
         <FileField label="Cover image (optional)" accept="image/*" onChange={setCover} />
-        <button disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60">
+        <button
+          disabled={busy}
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+        >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Publish news
         </button>
       </form>
@@ -411,7 +745,13 @@ function NewsAdmin() {
       <div className="space-y-3">
         {posts.map((p) => (
           <div key={p.id} className="flex items-center gap-4 rounded-[1.5rem] glass p-4">
-            {p.cover_url && <img src={fileUrl(p.cover_url)} alt="" className="h-12 w-12 rounded-xl object-cover" />}
+            {p.cover_url && (
+              <img
+                src={fileUrl(p.cover_url)}
+                alt=""
+                className="h-12 w-12 rounded-xl object-cover"
+              />
+            )}
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold">{p.title}</p>
               <p className="truncate text-sm text-muted-foreground">{p.body}</p>
@@ -436,17 +776,26 @@ function DevsAdmin() {
   const qc = useQueryClient();
   const { data: devs = [] } = useQuery({
     queryKey: ["developers"],
-    queryFn: async () => ((await supabase.from("developers").select("*").order("created_at", { ascending: false })).data ?? []) as DevRow[],
+    queryFn: async () =>
+      ((await supabase.from("developers").select("*").order("created_at", { ascending: false }))
+        .data ?? []) as DevRow[],
   });
 
   const setStatus = async (id: string, status: string) => {
-    const { error } = await supabase.from("developers").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    const { error } = await supabase
+      .from("developers")
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success(status === "active" ? "Developer approved" : "Updated");
     qc.invalidateQueries({ queryKey: ["developers"] });
   };
 
-  if (devs.length === 0) return <p className="text-center text-muted-foreground">No developer requests yet.</p>;
+  if (devs.length === 0)
+    return <p className="text-center text-muted-foreground">No developer requests yet.</p>;
 
   return (
     <div className="space-y-3">
@@ -454,16 +803,26 @@ function DevsAdmin() {
         <div key={d.id} className="flex flex-wrap items-center gap-3 rounded-[1.5rem] glass p-4">
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold">{d.display_name}</p>
-            <p className="truncate text-sm text-muted-foreground">{d.contact_email ?? "—"} · $4.99/mo</p>
+            <p className="truncate text-sm text-muted-foreground">
+              {d.contact_email ?? "—"} · $4.99/mo
+            </p>
           </div>
-          <span className="rounded-full bg-glass-strong px-3 py-1 text-xs capitalize text-muted-foreground">{d.status}</span>
+          <span className="rounded-full bg-glass-strong px-3 py-1 text-xs capitalize text-muted-foreground">
+            {d.status}
+          </span>
           {d.status !== "active" && (
-            <button onClick={() => setStatus(d.id, "active")} className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground">
+            <button
+              onClick={() => setStatus(d.id, "active")}
+              className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground"
+            >
               <Check className="h-3.5 w-3.5" /> Approve
             </button>
           )}
           {d.status !== "rejected" && (
-            <button onClick={() => setStatus(d.id, "rejected")} className="rounded-full bg-glass-strong px-4 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground">
+            <button
+              onClick={() => setStatus(d.id, "rejected")}
+              className="rounded-full bg-glass-strong px-4 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+            >
               Reject
             </button>
           )}

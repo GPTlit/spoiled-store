@@ -16,7 +16,12 @@ function pick(html: string, re: RegExp) {
   return m?.[1]?.trim();
 }
 function decode(s?: string) {
-  return s?.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+  return s
+    ?.replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
 }
 
 /** Reads a website and extracts its name, description and icon. */
@@ -29,10 +34,18 @@ export const inspectLink = createServerFn({ method: "POST" })
     if (!/^https?:$/.test(target.protocol)) throw new Error("Only http(s) links");
     let html = "";
     try {
-      const res = await fetch(target, { headers: { "User-Agent": "SpoiledStoreBot/1.0" }, redirect: "follow" });
+      const res = await fetch(target, {
+        headers: { "User-Agent": "SpoiledStoreBot/1.0" },
+        redirect: "follow",
+      });
       html = (await res.text()).slice(0, 400_000);
     } catch {
-      return { name: target.hostname, description: "", icon: null as string | null, reachable: false };
+      return {
+        name: target.hostname,
+        description: "",
+        icon: null as string | null,
+        reachable: false,
+      };
     }
     const abs = (u?: string) => (u ? new URL(decode(u)!, target).toString() : undefined);
     let name =
@@ -52,13 +65,24 @@ export const inspectLink = createServerFn({ method: "POST" })
       try {
         const m = await (await fetch(manifestHref)).json();
         if (m.name) name = m.name;
-        const best = (m.icons || []).sort((a: any, b: any) => parseInt(b.sizes) - parseInt(a.sizes))[0];
+        const best = (m.icons || []).sort(
+          (a: any, b: any) => parseInt(b.sizes) - parseInt(a.sizes),
+        )[0];
         if (best?.src && !icon) icon = new URL(best.src, manifestHref).toString();
-      } catch {}
+      } catch {
+        /* ignore manifest parsing failure */
+      }
     }
-    if (!icon) icon = abs(pick(html, /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)/i));
-    if (!icon) icon = abs(pick(html, /<link[^>]+rel=["'](?:shortcut )?icon["'][^>]+href=["']([^"']+)/i));
-    return { name: name.slice(0, 80), description: description.slice(0, 1000), icon: icon ?? null, reachable: true };
+    if (!icon)
+      icon = abs(pick(html, /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)/i));
+    if (!icon)
+      icon = abs(pick(html, /<link[^>]+rel=["'](?:shortcut )?icon["'][^>]+href=["']([^"']+)/i));
+    return {
+      name: name.slice(0, 80),
+      description: description.slice(0, 1000),
+      icon: icon ?? null,
+      reachable: true,
+    };
   });
 
 /** Automatically builds and attaches the Android .apk for a link app. */
@@ -73,7 +97,8 @@ export const buildAndroid = createServerFn({ method: "POST" })
     if (!app.source_url) throw new Error("This app has no link");
     await sb.from("apps").update({ build_status: "building" }).eq("id", app.id);
     try {
-      const manifestUrl = (await findManifest(app.source_url)) ?? `${STORE_ORIGIN}/api/public/manifest/${app.slug}`;
+      const manifestUrl =
+        (await findManifest(app.source_url)) ?? `${STORE_ORIGIN}/api/public/manifest/${app.slug}`;
       const iconUrl = app.icon_url
         ? /^https?:/.test(app.icon_url)
           ? app.icon_url
@@ -90,10 +115,20 @@ export const buildAndroid = createServerFn({ method: "POST" })
         manifestUrl,
       });
       const apkPath = `${app.id}/android-${Date.now()}.apk`;
-      const up = await sb.storage.from("store").upload(apkPath, out.apk, { contentType: "application/vnd.android.package-archive", upsert: true });
+      const up = await sb.storage.from("store").upload(apkPath, out.apk, {
+        contentType: "application/vnd.android.package-archive",
+        upsert: true,
+      });
       if (up.error) throw up.error;
-      if (out.keystore) await sb.storage.from("store").upload(keyPath, out.keystore, { upsert: true, contentType: "application/octet-stream" });
-      if (out.assetlinks) await sb.storage.from("store").upload(`${app.id}/assetlinks.json`, out.assetlinks, { upsert: true, contentType: "application/json" });
+      if (out.keystore)
+        await sb.storage
+          .from("store")
+          .upload(keyPath, out.keystore, { upsert: true, contentType: "application/octet-stream" });
+      if (out.assetlinks)
+        await sb.storage.from("store").upload(`${app.id}/assetlinks.json`, out.assetlinks, {
+          upsert: true,
+          contentType: "application/json",
+        });
       await sb.from("apps").update({ apk_url: apkPath, build_status: "ready" }).eq("id", app.id);
       return { ok: true };
     } catch (e: any) {
@@ -108,7 +143,11 @@ export const getCapacitorKit = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ appId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
-    const { data: app, error } = await context.supabase.from("apps").select("*").eq("id", data.appId).single();
+    const { data: app, error } = await context.supabase
+      .from("apps")
+      .select("*")
+      .eq("id", data.appId)
+      .single();
     if (error || !app) throw new Error("App not found");
     const zip = buildCapacitorKit({
       name: app.name,
@@ -124,11 +163,17 @@ export const getCapacitorKit = createServerFn({ method: "POST" })
 export const buildFromGithub = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
-    z.object({
-      appId: z.string().uuid(),
-      repo: z.string().regex(/^[\w.-]+\/[\w.-]+$/, "Use owner/repo"),
-      branch: z.string().max(100).regex(/^[\w./-]*$/).optional(),
-    }).parse(d),
+    z
+      .object({
+        appId: z.string().uuid(),
+        repo: z.string().regex(/^[\w.-]+\/[\w.-]+$/, "Use owner/repo"),
+        branch: z
+          .string()
+          .max(100)
+          .regex(/^[\w./-]*$/)
+          .optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
@@ -138,10 +183,14 @@ export const buildFromGithub = createServerFn({ method: "POST" })
     if (error || !app) throw new Error("App not found");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const apkPath = `${app.id}/android-native.apk`;
-    const up = await supabaseAdmin.storage.from("store").createSignedUploadUrl(apkPath, { upsert: true });
+    const up = await supabaseAdmin.storage
+      .from("store")
+      .createSignedUploadUrl(apkPath, { upsert: true });
     if (up.error || !up.data) throw new Error("Could not prepare upload: " + up.error?.message);
     const iconUrl = app.icon_url
-      ? /^https?:/.test(app.icon_url) ? app.icon_url : `${STORE_ORIGIN}/api/public/file?path=${encodeURIComponent(app.icon_url)}`
+      ? /^https?:/.test(app.icon_url)
+        ? app.icon_url
+        : `${STORE_ORIGIN}/api/public/file?path=${encodeURIComponent(app.icon_url)}`
       : "";
     const out = await dispatchAndroidBuild(data.repo, data.branch || null, {
       app_id: app.id,
@@ -154,8 +203,14 @@ export const buildFromGithub = createServerFn({ method: "POST" })
       callback_url: `${STORE_ORIGIN}/api/public/android-callback`,
       token: buildToken(app.id),
     });
-    await sb.from("apps").update({
-      github_repo: data.repo, github_branch: out.ref, build_run_url: out.runsUrl, build_status: "building",
-    }).eq("id", app.id);
+    await sb
+      .from("apps")
+      .update({
+        github_repo: data.repo,
+        github_branch: out.ref,
+        build_run_url: out.runsUrl,
+        build_status: "building",
+      })
+      .eq("id", app.id);
     return out;
   });

@@ -27,7 +27,9 @@ async function gh(path: string, init: RequestInit = {}) {
 }
 
 export function buildToken(appId: string) {
-  return createHmac("sha256", process.env["BUILD_CALLBACK_SECRET"]!).update("android:" + appId).digest("hex");
+  return createHmac("sha256", process.env["BUILD_CALLBACK_SECRET"]!)
+    .update("android:" + appId)
+    .digest("hex");
 }
 export function checkToken(appId: string, token: string) {
   const a = Buffer.from(buildToken(appId));
@@ -36,7 +38,11 @@ export function checkToken(appId: string, token: string) {
 }
 
 /** Resolves the default branch, ensures the build workflow exists in the repo, then dispatches it. */
-export async function dispatchAndroidBuild(repo: string, branch: string | null, inputs: Record<string, string>) {
+export async function dispatchAndroidBuild(
+  repo: string,
+  branch: string | null,
+  inputs: Record<string, string>,
+) {
   const info = await gh(`repos/${repo}`);
   if (info.status === 404) throw new Error(`Repository ${repo} not found or not accessible`);
   const ref = branch || (await info.json()).default_branch;
@@ -66,17 +72,21 @@ export async function dispatchAndroidBuild(repo: string, branch: string | null, 
 
   let last = "";
   for (let i = 0; i < 4; i++) {
-    const res = await fetch(`${GATEWAY}/repos/${repo}/actions/workflows/${WORKFLOW_FILE}/dispatches`, {
-      method: "POST",
-      headers: {
-        Accept: "application/vnd.github+json",
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env["LOVABLE_API_KEY"]}`,
-        "X-Connection-Api-Key": process.env["GITHUB_API_KEY"]!,
+    const res = await fetch(
+      `${GATEWAY}/repos/${repo}/actions/workflows/${WORKFLOW_FILE}/dispatches`,
+      {
+        method: "POST",
+        headers: {
+          Accept: "application/vnd.github+json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env["LOVABLE_API_KEY"]}`,
+          "X-Connection-Api-Key": process.env["GITHUB_API_KEY"]!,
+        },
+        body: JSON.stringify({ ref, inputs }),
       },
-      body: JSON.stringify({ ref, inputs }),
-    });
-    if (res.ok) return { ref, runsUrl: `https://github.com/${repo}/actions/workflows/${WORKFLOW_FILE}` };
+    );
+    if (res.ok)
+      return { ref, runsUrl: `https://github.com/${repo}/actions/workflows/${WORKFLOW_FILE}` };
     last = `[${res.status}] ${await res.text()}`;
     await new Promise((r) => setTimeout(r, 3000));
   }

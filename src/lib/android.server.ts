@@ -17,7 +17,10 @@ type Input = {
 /** Finds the site's own web manifest, if it has one. */
 export async function findManifest(url: string): Promise<string | null> {
   try {
-    const res = await fetch(url, { headers: { "User-Agent": "SpoiledStoreBot/1.0" }, redirect: "follow" });
+    const res = await fetch(url, {
+      headers: { "User-Agent": "SpoiledStoreBot/1.0" },
+      redirect: "follow",
+    });
     const html = (await res.text()).slice(0, 400_000);
     const m =
       html.match(/<link[^>]+rel=["']manifest["'][^>]+href=["']([^"']+)/i) ||
@@ -38,7 +41,10 @@ export async function buildAndroidApk(k: Input) {
   const target = new URL(k.url);
   const pass = "spoiled-" + k.packageId.replace(/[^a-z0-9]/gi, "").slice(0, 20);
   const minor = k.version.split(".").map((n) => parseInt(n) || 0);
-  const versionCode = Math.max(1, (minor[0] ?? 1) * 10000 + (minor[1] ?? 0) * 100 + (minor[2] ?? 0));
+  const versionCode = Math.max(
+    1,
+    (minor[0] ?? 1) * 10000 + (minor[1] ?? 0) * 100 + (minor[2] ?? 0),
+  );
   const body = {
     packageId: k.packageId,
     name: k.name.slice(0, 50),
@@ -86,7 +92,11 @@ export async function buildAndroidApk(k: Input) {
     additionalTrustedOrigins: [],
     retainedBundleIds: [],
   };
-  const res = await fetch(BUILDER, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const res = await fetch(BUILDER, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
   if (!res.ok) {
     const txt = (await res.text()).replace(/<[^>]+>/g, " ").slice(0, 200);
     throw new Error("Android build failed: " + txt.trim());

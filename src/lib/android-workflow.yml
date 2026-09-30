@@ -29,6 +29,11 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17 }
       - uses: android-actions/setup-android@v3
+        with:
+          packages: |
+            platform-tools
+            platforms;android-35
+            build-tools;35.0.0
 
       - name: Build the web app
         run: |
@@ -81,12 +86,12 @@ jobs:
           sed -i "s/versionCode [0-9]*/versionCode ${{ github.run_number }}/; s/versionName \"[^\"]*\"/versionName \"$APP_VERSION\"/" app/build.gradle
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon
-          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          BT="$ANDROID_HOME/build-tools/35.0.0"
           keytool -genkeypair -keystore ../spoiled.jks -alias spoiled -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass spoiledstore -keypass spoiledstore -dname "CN=$APP_NAME, O=Spoiled Store"
           IN=$(ls app/build/outputs/apk/release/*.apk | head -1)
-          $BT/zipalign -f -p 4 "$IN" ../aligned.apk
-          $BT/apksigner sign --ks ../spoiled.jks --ks-pass pass:spoiledstore --key-pass pass:spoiledstore --out ../app.apk ../aligned.apk
+          "$BT/zipalign" -f -p 4 "$IN" ../aligned.apk
+          "$BT/apksigner" sign --ks ../spoiled.jks --ks-pass pass:spoiledstore --key-pass pass:spoiledstore --out ../app.apk ../aligned.apk
 
       - name: Upload to Spoiled Store
         run: |

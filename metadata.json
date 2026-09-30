@@ -1,0 +1,7 @@
+{
+  "name": "Spoiled Store",
+  "description": "Download Spoiled apps straight to your Android or iPhone.",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

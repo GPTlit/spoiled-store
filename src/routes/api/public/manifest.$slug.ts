@@ -32,7 +32,10 @@ export const Route = createFileRoute("/api/public/manifest/$slug")({
           ],
         };
         return new Response(JSON.stringify(manifest), {
-          headers: { "Content-Type": "application/manifest+json", "Cache-Control": "public, max-age=300" },
+          headers: {
+            "Content-Type": "application/manifest+json",
+            "Cache-Control": "public, max-age=300",
+          },
         });
       },
     },

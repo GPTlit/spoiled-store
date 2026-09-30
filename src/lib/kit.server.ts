@@ -34,7 +34,11 @@ export function buildCapacitorKit(k: Kit): Uint8Array {
     appId: k.bundleId,
     appName: k.name,
     webDir: "www",
-    server: { url: k.url, cleartext: false, allowNavigation: [new URL(k.url || "https://example.com").hostname] },
+    server: {
+      url: k.url,
+      cleartext: false,
+      allowNavigation: [new URL(k.url || "https://example.com").hostname],
+    },
     ios: { contentInset: "always", scheme: k.name.replace(/[^A-Za-z0-9]/g, "") || "App" },
     android: { allowMixedContent: false },
     plugins: {
