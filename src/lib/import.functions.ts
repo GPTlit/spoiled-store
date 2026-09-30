@@ -119,3 +119,43 @@ export const getCapacitorKit = createServerFn({ method: "POST" })
     });
     return { filename: `${app.slug}-capacitor.zip`, base64: Buffer.from(zip).toString("base64") };
   });
+
+/** Starts a real native Android build of a GitHub repo on GitHub Actions. */
+export const buildFromGithub = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({
+      appId: z.string().uuid(),
+      repo: z.string().regex(/^[\w.-]+\/[\w.-]+$/, "Use owner/repo"),
+      branch: z.string().max(100).regex(/^[\w./-]*$/).optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { dispatchAndroidBuild, buildToken } = await import("./github.server");
+    const sb = context.supabase;
+    const { data: app, error } = await sb.from("apps").select("*").eq("id", data.appId).single();
+    if (error || !app) throw new Error("App not found");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const apkPath = `${app.id}/android-native.apk`;
+    const up = await supabaseAdmin.storage.from("store").createSignedUploadUrl(apkPath, { upsert: true });
+    if (up.error || !up.data) throw new Error("Could not prepare upload: " + up.error?.message);
+    const iconUrl = app.icon_url
+      ? /^https?:/.test(app.icon_url) ? app.icon_url : `${STORE_ORIGIN}/api/public/file?path=${encodeURIComponent(app.icon_url)}`
+      : "";
+    const out = await dispatchAndroidBuild(data.repo, data.branch || null, {
+      app_id: app.id,
+      app_name: app.name.slice(0, 50),
+      bundle_id: app.bundle_id || bundleIdFor(app.slug),
+      version: app.version || "1.0.0",
+      icon_url: iconUrl,
+      live_url: app.source_url ?? "",
+      upload_url: up.data.signedUrl,
+      callback_url: `${STORE_ORIGIN}/api/public/android-callback`,
+      token: buildToken(app.id),
+    });
+    await sb.from("apps").update({
+      github_repo: data.repo, github_branch: out.ref, build_run_url: out.runsUrl, build_status: "building",
+    }).eq("id", app.id);
+    return out;
+  });
