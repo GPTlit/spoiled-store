@@ -18,11 +18,14 @@ export type Database = {
         Row: {
           apk_url: string | null
           build_log: string | null
+          build_run_url: string | null
           build_status: string
           bundle_id: string | null
           category: string | null
           created_at: string
           description: string | null
+          github_branch: string | null
+          github_repo: string | null
           icon_url: string | null
           id: string
           ipa_url: string | null
@@ -40,11 +43,14 @@ export type Database = {
         Insert: {
           apk_url?: string | null
           build_log?: string | null
+          build_run_url?: string | null
           build_status?: string
           bundle_id?: string | null
           category?: string | null
           created_at?: string
           description?: string | null
+          github_branch?: string | null
+          github_repo?: string | null
           icon_url?: string | null
           id?: string
           ipa_url?: string | null
@@ -62,11 +68,14 @@ export type Database = {
         Update: {
           apk_url?: string | null
           build_log?: string | null
+          build_run_url?: string | null
           build_status?: string
           bundle_id?: string | null
           category?: string | null
           created_at?: string
           description?: string | null
+          github_branch?: string | null
+          github_repo?: string | null
           icon_url?: string | null
           id?: string
           ipa_url?: string | null

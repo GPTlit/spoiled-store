@@ -1,0 +1,1 @@
+ALTER TABLE public.apps ADD COLUMN IF NOT EXISTS github_repo text, ADD COLUMN IF NOT EXISTS github_branch text, ADD COLUMN IF NOT EXISTS build_run_url text;
