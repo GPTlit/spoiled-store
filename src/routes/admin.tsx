@@ -230,6 +230,7 @@ function AppsList() {
   };
   const { data: apps = [], isLoading } = useQuery({
     queryKey: ["admin-apps"],
+    refetchInterval: (q) => ((q.state.data as AppRow[] | undefined)?.some((a) => a.build_status === "building") ? 15000 : false),
     queryFn: async () => ((await supabase.from("apps").select("*").order("created_at", { ascending: false })).data ?? []) as AppRow[],
   });
   const refresh = () => { qc.invalidateQueries({ queryKey: ["admin-apps"] }); qc.invalidateQueries({ queryKey: ["apps"] }); };
@@ -319,7 +320,7 @@ function GithubBuild({ app, onDone }: { app: AppRow; onDone: () => void }) {
   const [busy, setBusy] = useState(false);
   const go = async () => {
     const r = repo.trim().replace(/^https?:\/\/github\.com\//, "").replace(/\.git$/, "").replace(/\/$/, "");
-    if (!/^[\w.-]+\/[\w.-]+$/.test(r)) return toast.error("Enter the repository as owner/repo");
+    if (!/^[\w.-]+\/[\w.-]+$/.test(r)) { toast.error("Enter the repository as owner/repo"); return; }
     setBusy(true);
     try {
       await start({ data: { appId: app.id, repo: r, ...(branch.trim() ? { branch: branch.trim() } : {}) } });
