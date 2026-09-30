@@ -18,6 +18,7 @@ import { Route as NewsRouteImport } from './routes/news'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as AppSlugRouteImport } from './routes/app.$slug'
 import { Route as OpenSlugRouteImport } from './routes/open.$slug'
+import { Route as ApiPublicAndroidCallbackRouteImport } from './routes/api/public/android-callback'
 import { Route as ApiPublicFileRouteImport } from './routes/api/public/file'
 import { Route as ApiPublicIosSlugRouteImport } from './routes/api/public/ios.$slug'
 import { Route as ApiPublicManifestSlugRouteImport } from './routes/api/public/manifest.$slug'
@@ -67,6 +68,12 @@ const OpenSlugRoute = OpenSlugRouteImport.update({
   path: '/open/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicAndroidCallbackRoute =
+  ApiPublicAndroidCallbackRouteImport.update({
+    id: '/api/public/android-callback',
+    path: '/api/public/android-callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicFileRoute = ApiPublicFileRouteImport.update({
   id: '/api/public/file',
   path: '/api/public/file',
@@ -93,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/app/$slug': typeof AppSlugRoute
   '/open/$slug': typeof OpenSlugRoute
+  '/api/public/android-callback': typeof ApiPublicAndroidCallbackRoute
   '/api/public/file': typeof ApiPublicFileRoute
   '/api/public/ios/$slug': typeof ApiPublicIosSlugRoute
   '/api/public/manifest/$slug': typeof ApiPublicManifestSlugRoute
@@ -107,6 +115,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/app/$slug': typeof AppSlugRoute
   '/open/$slug': typeof OpenSlugRoute
+  '/api/public/android-callback': typeof ApiPublicAndroidCallbackRoute
   '/api/public/file': typeof ApiPublicFileRoute
   '/api/public/ios/$slug': typeof ApiPublicIosSlugRoute
   '/api/public/manifest/$slug': typeof ApiPublicManifestSlugRoute
@@ -122,6 +131,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/app/$slug': typeof AppSlugRoute
   '/open/$slug': typeof OpenSlugRoute
+  '/api/public/android-callback': typeof ApiPublicAndroidCallbackRoute
   '/api/public/file': typeof ApiPublicFileRoute
   '/api/public/ios/$slug': typeof ApiPublicIosSlugRoute
   '/api/public/manifest/$slug': typeof ApiPublicManifestSlugRoute
@@ -138,6 +148,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/app/$slug'
     | '/open/$slug'
+    | '/api/public/android-callback'
     | '/api/public/file'
     | '/api/public/ios/$slug'
     | '/api/public/manifest/$slug'
@@ -152,6 +163,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/app/$slug'
     | '/open/$slug'
+    | '/api/public/android-callback'
     | '/api/public/file'
     | '/api/public/ios/$slug'
     | '/api/public/manifest/$slug'
@@ -166,6 +178,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/app/$slug'
     | '/open/$slug'
+    | '/api/public/android-callback'
     | '/api/public/file'
     | '/api/public/ios/$slug'
     | '/api/public/manifest/$slug'
@@ -181,6 +194,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   AppSlugRoute: typeof AppSlugRoute
   OpenSlugRoute: typeof OpenSlugRoute
+  ApiPublicAndroidCallbackRoute: typeof ApiPublicAndroidCallbackRoute
   ApiPublicFileRoute: typeof ApiPublicFileRoute
   ApiPublicIosSlugRoute: typeof ApiPublicIosSlugRoute
   ApiPublicManifestSlugRoute: typeof ApiPublicManifestSlugRoute
@@ -251,6 +265,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OpenSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/android-callback': {
+      id: '/api/public/android-callback'
+      path: '/api/public/android-callback'
+      fullPath: '/api/public/android-callback'
+      preLoaderRoute: typeof ApiPublicAndroidCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/file': {
       id: '/api/public/file'
       path: '/api/public/file'
@@ -285,6 +306,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   AppSlugRoute: AppSlugRoute,
   OpenSlugRoute: OpenSlugRoute,
+  ApiPublicAndroidCallbackRoute: ApiPublicAndroidCallbackRoute,
   ApiPublicFileRoute: ApiPublicFileRoute,
   ApiPublicIosSlugRoute: ApiPublicIosSlugRoute,
   ApiPublicManifestSlugRoute: ApiPublicManifestSlugRoute,
