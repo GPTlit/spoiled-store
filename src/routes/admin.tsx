@@ -3,14 +3,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check, Globe, Loader2, Package, RefreshCw, Trash2, Upload } from "lucide-react";
+import { Check, Github, Globe, Loader2, Package, RefreshCw, Trash2, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { StoreHeader } from "@/components/StoreHeader";
 import { AppIcon } from "@/components/AppIcon";
 import { useAuth } from "@/hooks/use-auth";
 import { STATUS_LABEL, fileUrl, slugify, type AppRow } from "@/lib/store";
 import type { Database } from "@/integrations/supabase/types";
-import { buildAndroid as buildAndroidFn, getCapacitorKit, inspectLink } from "@/lib/import.functions";
+import { buildAndroid as buildAndroidFn, buildFromGithub, getCapacitorKit, inspectLink } from "@/lib/import.functions";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -280,6 +280,7 @@ function AppsList() {
               <StatusPill ok={!!a.ipa_url} label="iPhone .ipa" />
             </div>
           )}
+          <GithubBuild app={a} onDone={refresh} />
           <div className="mt-3 flex flex-wrap gap-2">
             {a.source_type === "link" ? (
               <button disabled={rebuilding === a.id} onClick={() => rebuild(a)} className="flex items-center gap-1.5 rounded-full bg-glass-strong px-3 py-1.5 hover:bg-accent disabled:opacity-60">
@@ -298,12 +299,43 @@ function AppsList() {
               </button>
             )}
             <Link to="/app/$slug" params={{ slug: a.slug }} className="rounded-full bg-glass-strong px-3 py-1.5 hover:bg-accent">View</Link>
+            {a.build_run_url && (
+              <a href={a.build_run_url} target="_blank" rel="noreferrer" className="rounded-full bg-glass-strong px-3 py-1.5 hover:bg-accent">Build log</a>
+            )}
             <button onClick={async () => { if (confirm(`Delete ${a.name}?`)) { await supabase.from("apps").delete().eq("id", a.id); refresh(); } }} className="ml-auto flex items-center gap-1.5 rounded-full px-3 py-1.5 text-destructive hover:bg-destructive/10">
               <Trash2 className="h-4 w-4" /> Delete
             </button>
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function GithubBuild({ app, onDone }: { app: AppRow; onDone: () => void }) {
+  const start = useServerFn(buildFromGithub);
+  const [repo, setRepo] = useState(app.github_repo ?? "");
+  const [branch, setBranch] = useState(app.github_branch ?? "");
+  const [busy, setBusy] = useState(false);
+  const go = async () => {
+    const r = repo.trim().replace(/^https?:\/\/github\.com\//, "").replace(/\.git$/, "").replace(/\/$/, "");
+    if (!/^[\w.-]+\/[\w.-]+$/.test(r)) return toast.error("Enter the repository as owner/repo");
+    setBusy(true);
+    try {
+      await start({ data: { appId: app.id, repo: r, ...(branch.trim() ? { branch: branch.trim() } : {}) } });
+      toast.success("Native Android build started on GitHub — usually 5–15 minutes. The .apk attaches itself when done.");
+      onDone();
+    } catch (e: any) { toast.error(e.message ?? "Could not start build"); }
+    finally { setBusy(false); }
+  };
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl bg-glass p-3 text-sm">
+      <Github className="h-4 w-4 text-muted-foreground" />
+      <input value={repo} onChange={(e) => setRepo(e.target.value)} placeholder="GitHub repo (owner/repo)" className="min-w-0 flex-1 rounded-full border border-input bg-glass px-3 py-1.5 outline-none focus:border-ring" />
+      <input value={branch} onChange={(e) => setBranch(e.target.value)} placeholder="branch (optional)" className="w-36 rounded-full border border-input bg-glass px-3 py-1.5 outline-none focus:border-ring" />
+      <button disabled={busy} onClick={go} className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 font-semibold text-primary-foreground disabled:opacity-60">
+        {busy && <Loader2 className="h-4 w-4 animate-spin" />} Build native Android
+      </button>
     </div>
   );
 }
