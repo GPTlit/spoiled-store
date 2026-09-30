@@ -32,7 +32,7 @@ function ProfilePage() {
   const [pw, setPw] = useState("");
 
   useEffect(() => {
-    if (user) setName((user.user_metadata?.full_name as string) ?? (user.user_metadata?.name as string) ?? "");
+    if (user) setName((user.user_metadata?.['full_name'] as string) ?? (user.user_metadata?.['name'] as string) ?? "");
   }, [user]);
 
   const { data } = useQuery({
@@ -99,7 +99,7 @@ function ProfilePage() {
             </form>
             <form className="space-y-2" onSubmit={async (e) => {
               e.preventDefault();
-              if (pw.length < 8) return toast.error("Use at least 8 characters");
+              if (pw.length < 8) { toast.error("Use at least 8 characters"); return; }
               const { error } = await supabase.auth.updateUser({ password: pw });
               if (error) toast.error(error.message); else { toast.success("Password updated"); setPw(""); }
             }}>
