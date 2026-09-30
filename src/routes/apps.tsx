@@ -7,7 +7,7 @@ import { AppIcon } from "@/components/AppIcon";
 import type { AppRow } from "@/lib/store";
 
 export const Route = createFileRoute("/apps")({
-  validateSearch: (s: Record<string, unknown>) => ({ q: typeof s.q === "string" ? s.q : undefined }),
+  validateSearch: (s: Record<string, unknown>): { q?: string } => (typeof s.q === "string" && s.q ? { q: s.q } : {}),
   head: () => ({
     meta: [
       { title: "Apps — Spoiled Store" },
