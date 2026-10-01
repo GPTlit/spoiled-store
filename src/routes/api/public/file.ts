@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createClient } from "@supabase/supabase-js";
+
+// Files that must never be handed out publicly (signing keys, etc.)
+const PRIVATE = /(\.keystore|\.jks|\.p12|\.pem|\.key)$/i;
 
 export const Route = createFileRoute("/api/public/file")({
   server: {
@@ -8,29 +10,12 @@ export const Route = createFileRoute("/api/public/file")({
         const url = new URL(request.url);
         const path = url.searchParams.get("path");
         const dl = url.searchParams.get("dl");
-        if (!path || path.length > 500 || path.includes("..")) {
+        if (!path || path.length > 500 || path.includes("..") || path.startsWith("/")) {
           return new Response("Bad path", { status: 400 });
         }
-        const key =
-          process.env["SUPABASE_PUBLISHABLE_KEY"] ||
-          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder";
-        const sb = createClient(
-          process.env["SUPABASE_URL"] || "https://placeholder.supabase.co",
-          key,
-          {
-            auth: { persistSession: false },
-            global: {
-              fetch: (input, init) => {
-                const h = new Headers(init?.headers);
-                if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`)
-                  h.delete("Authorization");
-                h.set("apikey", key);
-                return fetch(input, { ...init, headers: h });
-              },
-            },
-          },
-        );
-        const { data, error } = await sb.storage
+        if (PRIVATE.test(path)) return new Response("Not found", { status: 404 });
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { data, error } = await supabaseAdmin.storage
           .from("store")
           .createSignedUrl(path, 3600, dl ? { download: dl.slice(0, 120) } : undefined);
         if (error || !data) return new Response("Not found", { status: 404 });
